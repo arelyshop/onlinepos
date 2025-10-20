@@ -18,19 +18,9 @@
         #reader__dashboard_section_csr button { background-color: #4a5568; color: white; padding: 8px 16px; border-radius: 8px; margin-top: 10px; }
         .sortable-ghost { opacity: 0.4; background: #2d3748; }
         .drag-handle { cursor: move; }
-        /* Estilos para la Notificación */
-        #notification-banner {
-            transition: transform 0.5s ease-in-out;
-            transform: translateY(-120%);
-        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-300">
-
-    <!-- Notification Banner -->
-    <div id="notification-banner" class="fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg">
-        <span id="notification-message"></span>
-    </div>
 
     <!-- Main Admin Content -->
     <div id="admin-panel" class="flex h-screen bg-gray-900">
@@ -238,6 +228,7 @@
                                 </button>
                             </div>
                         </form>
+                         <div id="status-message" class="mt-4 text-center font-semibold"></div>
                     </div>
                 </div>
                 </div>
