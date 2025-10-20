@@ -129,7 +129,7 @@
                             <!-- QR Code Section -->
                             <div class="bg-white rounded-xl shadow-lg p-6 text-center">
                                 <h3 class="text-xl font-bold text-gray-800 mb-4">Escanea y paga</h3>
-                                <img id="pos-qr-code" src="/images/qr-pago.png" alt="Código QR para pago" class="w-full h-auto max-w-xs mx-auto rounded-lg cursor-pointer" onclick="showQrModal()" onerror="this.onerror=null; this.src='https://placehold.co/192x192/e2e8f0/94a3b8?text=QR';">
+                                <img id="pos-qr-code" src="/images/qr-pago.webp" alt="Código QR para pago" class="w-full h-auto max-w-xs mx-auto rounded-lg cursor-pointer" onclick="showQrModal()" onerror="this.onerror=null; this.src='https://placehold.co/192x192/e2e8f0/94a3b8?text=QR';">
                             </div>
                             <!-- Go to Online Store Button (Mobile Only) -->
                             <div class="lg:hidden">
@@ -237,7 +237,7 @@
             await Promise.all([
                 fetchProducts(),
                 loadImageAsPngDataUrl('/images/logo-escritorio.svg').then(logo => preloadedLogo = logo),
-                loadImageAsJpegDataUrl('/images/qr-pdf.png').then(qr => preloadedPdfQr = qr)
+                loadImageAsJpegDataUrl('/images/qr-pdf.webp').then(qr => preloadedPdfQr = qr)
             ]);
         }
         
@@ -800,6 +800,7 @@
     </script>
 </body>
 </html>
+
 
 
 
