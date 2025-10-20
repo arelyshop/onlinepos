@@ -42,6 +42,12 @@ CREATE TABLE sale_items (
 exports.handler = async (event, context) => {
     const client = await pool.connect();
     
+    // Definimos las cabeceras CORS aquí para reutilizarlas
+    const headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+    };
+
     try {
         const httpMethod = event.httpMethod;
 
@@ -67,7 +73,7 @@ exports.handler = async (event, context) => {
                 GROUP BY s.id
                 ORDER BY s.sale_date DESC;
             `);
-            return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'success', data: result.rows }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ status: 'success', data: result.rows }) };
         } else if (httpMethod === 'POST') {
             const { data } = JSON.parse(event.body);
             
@@ -104,7 +110,7 @@ exports.handler = async (event, context) => {
             }
 
             await client.query('COMMIT');
-            return { statusCode: 201, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'success', saleId: newSaleId }) };
+            return { statusCode: 201, headers, body: JSON.stringify({ status: 'success', saleId: newSaleId }) };
 
         } else if (event.path.includes('/annul') && httpMethod === 'PUT') {
             const { data } = JSON.parse(event.body);
@@ -115,11 +121,11 @@ exports.handler = async (event, context) => {
             const saleResult = await client.query('SELECT id, status FROM sales WHERE sale_id = $1', [saleId]);
             if (saleResult.rows.length === 0) {
                 await client.query('ROLLBACK');
-                return { statusCode: 404, body: JSON.stringify({ status: 'error', message: 'Venta no encontrada.' }) };
+                return { statusCode: 404, headers, body: JSON.stringify({ status: 'error', message: 'Venta no encontrada.' }) };
             }
             if (saleResult.rows[0].status === 'Anulada') {
                 await client.query('ROLLBACK');
-                return { statusCode: 400, body: JSON.stringify({ status: 'error', message: 'La venta ya ha sido anulada.' }) };
+                return { statusCode: 400, headers, body: JSON.stringify({ status: 'error', message: 'La venta ya ha sido anulada.' }) };
             }
             
             const saleDbId = saleResult.rows[0].id;
@@ -132,15 +138,15 @@ exports.handler = async (event, context) => {
             await client.query("UPDATE sales SET status = 'Anulada' WHERE id = $1", [saleDbId]);
             
             await client.query('COMMIT');
-            return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'success', message: `Venta ${saleId} anulada y stock restaurado.` }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ status: 'success', message: `Venta ${saleId} anulada y stock restaurado.` }) };
 
         } else {
-            return { statusCode: 405, body: 'Method Not Allowed' };
+            return { statusCode: 405, headers, body: 'Method Not Allowed' };
         }
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error en la función de sales:', error);
-        return { statusCode: 500, body: JSON.stringify({ status: 'error', message: error.message }) };
+        return { statusCode: 500, headers, body: JSON.stringify({ status: 'error', message: error.message }) };
     } finally {
         client.release();
     }
