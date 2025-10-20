@@ -88,18 +88,12 @@
         <span id="notification-message"></span>
     </div>
 
-    <!-- Preloader -->
-    <div id="preloader" class="fixed inset-0 bg-gray-800 flex flex-col items-center justify-center z-50">
-        <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#e3e3e3"><path d="M480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 31.5-155.5t86-127Q252-817 325-848.5T480-880q17 0 28.5 11.5T520-840q0 17-11.5 28.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160q133 0 226.5-93.5T800-480q0-17 11.5-28.5T840-520q17 0 28.5 11.5T880-480q0 82-31.5 155t-86 127.5q-54.5 54.5-127 86T480-80Z"/></svg>
-        <p class="text-white text-lg mt-4">Cargando datos...</p>
-    </div>
-
     <!-- App Container -->
     <div id="app-container" class="hidden flex-col min-h-screen">
         <header class="bg-gray-800 text-white shadow-md">
             <div class="container mx-auto p-4 flex justify-between items-center">
                 <div class="flex items-center space-x-4">
-                    <img src="https://dcdn-us.mitiendanube.com/stores/004/546/736/themes/common/logo-660776128-1736645739-9bb5db1715d3b799cdf782b0f0815d541736645739.webp?0" alt="Logo ArelyShop" class="h-10">
+                    <img src="/images/logo-escritorio.svg" alt="Logo ArelyShop" class="h-10">
                     <h1 class="text-xl font-bold hidden sm:block">Sistema de Gestión</h1>
                 </div>
             </div>
@@ -135,7 +129,7 @@
                         <div class="lg:col-span-2 bg-white rounded-xl shadow-lg overflow-hidden">
                             <div class="p-6 flex justify-between items-center" style="background-color: #2c3c53; color: white;">
                                 <div class="flex items-center">
-                                    <img src="https://dcdn-us.mitiendanube.com/stores/004/546/736/themes/common/logo-660776128-1736645739-9bb5db1715d3b799cdf782b0f0815d541736645739.webp?0" alt="Logo ArelyShop" class="h-12 mr-4" onerror="this.onerror=null; this.src='https://placehold.co/200x50/e2e8f0/94a3b8?text=ArelyShop';">
+                                    <img src="/images/logo-escritorio.svg" alt="Logo ArelyShop" class="h-12 mr-4" onerror="this.onerror=null; this.src='https://placehold.co/200x50/e2e8f0/94a3b8?text=ArelyShop';">
                                     <div class="hidden md:block">
                                         <h2 class="font-bold text-xl">ArelyShop</h2>
                                         <p class="text-xs">Santa Cruz de la Sierra, Bolivia</p>
@@ -446,7 +440,7 @@
 
     <script>
         // --- GLOBAL APP STATE ---
-        const API_BASE_URL = '/.netlify/functions/api';
+        const API_BASE_URL = '/netlify/functions';
         
         let products = [];
         let sales = [];
@@ -457,27 +451,31 @@
         let currentProductInModal = null;
         let html5QrCode = null; 
         let currentPdfBlob = null;
-        let currentPdfFileName = '';
-
-        // --- AUTHENTICATION & INITIALIZATION ---
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('current-year').textContent = new Date().getFullYear();
-            html5QrCode = new Html5Qrcode("reader");
+        function logout() {
+            sessionStorage.removeItem('user');
+            products = [];
+            sales = [];
+            cart = [];
             
-            // Bypass login and initialize the app directly
-            document.getElementById('preloader').classList.remove('hidden');
-            document.getElementById('app-container').classList.add('hidden');
-            initializeApp();
-        });
+            // Reset tab visibility to default before showing login screen
+            document.getElementById('tab-inventory').style.display = 'flex';
+            document.getElementById('tab-reports').style.display = 'flex';
+
+            checkAuth();
+        }
 
         async function initializeApp() {
+            // Mostrar la aplicación inmediatamente para evitar la pantalla de carga
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('flex');
+            
             initTabs();
             setupEventListeners();
 
             await Promise.all([
                 fetchProducts(),
                 fetchSales(),
-                loadImageAsPngDataUrl('https://dcdn-us.mitiendanube.com/stores/004/546/736/themes/common/logo-660776128-1736645739-9bb5db1715d3b799cdf782b0f0815d541736645739.webp').then(logo => preloadedLogo = logo),
+                loadImageAsPngDataUrl('/images/logo-escritorio.svg').then(logo => preloadedLogo = logo),
                 loadImageAsJpegDataUrl('https://lh3.googleusercontent.com/d/1i08QtanwwFJ4yky2r2_smJL4ivBURTKG=w800?authuser=0').then(qr => preloadedPdfQr = qr)
             ]);
 
@@ -485,10 +483,6 @@
             renderSalesResults();
             displayNextSaleId();
             generateReports();
-
-            document.getElementById('preloader').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('hidden');
-            document.getElementById('app-container').classList.add('flex');
         }
 
         // --- ROBUST NETWORKING & UI FUNCTIONS ---
@@ -658,13 +652,26 @@
             document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
         }
         
-        function initTabs() {
-            const tabs = {
         async function fetchProducts() {
             try {
                 const response = await robustFetch(`${API_BASE_URL}/products`);
                 const result = await response.json();
-                products = result.status === 'success' ? result.data : [];
+                if (result.status === 'success' && Array.isArray(result.data)) {
+                    // Mapeo de datos desde la base de datos (PostgreSQL) al formato que usa el frontend.
+                    products = result.data.map(p => ({
+                        nombre: p.name,
+                        sku: p.sku,
+                        precioVenta: p.sale_price,
+                        precioCompra: p.purchase_price,
+                        precioMayoreo: p.wholesale_price,
+                        cantidad: p.stock,
+                        codigoBarras: p.barcode,
+                        urlFoto1: p.photo_url_1,
+                        descripcion: p.description
+                    }));
+                } else {
+                    products = [];
+                }
             } catch (error) {
                 console.error("Fallo al cargar productos:", error);
                 showNotification("No se pudieron cargar los productos. Revisa tu conexión.", 'error');
@@ -1031,6 +1038,19 @@
             const productData = {};
             formData.forEach((value, key) => { productData[key] = value; });
             
+            // Mapeo de datos desde el formulario del frontend al formato de la base de datos (PostgreSQL).
+            const dataForBackend = {
+                name: productData.nombre,
+                sku: productData.sku,
+                sale_price: productData.precioVenta,
+                purchase_price: productData.precioCompra,
+                wholesale_price: productData.precioMayoreo,
+                stock: productData.cantidad,
+                barcode: productData.codigoBarras,
+                photo_url_1: productData.urlFoto1,
+                originalSku: productData.originalSku // Necesario para la actualización (PUT)
+            };
+
             const isUpdating = productData.originalSku && productData.originalSku !== '';
             const method = isUpdating ? 'PUT' : 'POST';
             
@@ -1038,7 +1058,7 @@
                 const response = await robustFetch(`${API_BASE_URL}/products`, {
                     method: method,
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ data: productData })
+                    body: JSON.stringify({ data: dataForBackend })
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
@@ -1510,4 +1530,3 @@
     </script>
 </body>
 </html>
-
