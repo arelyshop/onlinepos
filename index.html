@@ -96,6 +96,16 @@
                     <img src="/images/logo-escritorio.svg" alt="Logo ArelyShop" class="h-10">
                     <h1 class="text-xl font-bold hidden sm:block">Sistema de Gestión</h1>
                 </div>
+                <div class="flex items-center space-x-4">
+                    <div id="user-info" class="text-right">
+                         <p class="font-semibold text-sm" id="user-fullname"></p>
+                         <p class="text-xs text-gray-400" id="user-role"></p>
+                    </div>
+                    <button id="logout-button" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
+                        Salir
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -242,30 +252,28 @@
                         <form id="inventory-form" class="space-y-6">
                             <input type="hidden" id="originalSku" name="originalSku">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto</label><input type="text" id="nombre" name="nombre" required class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                                <div><label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto</label><input type="text" id="name" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
                                 <div><label for="sku" class="block text-sm font-medium text-gray-700 mb-1">SKU</label><input type="text" id="sku" name="sku" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div><label for="precioVenta" class="block text-sm font-medium text-gray-700 mb-1">Precio (Venta)</label><input type="number" step="0.01" id="precioVenta" name="precioVenta" required class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
-                                <div><label for="precioCompra" class="block text-sm font-medium text-gray-700 mb-1">Precio (Compra)</label><input type="number" step="0.01" id="precioCompra" name="precioCompra" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
-                                <div><label for="precioMayoreo" class="block text-sm font-medium text-gray-700 mb-1">Precio (Mayoreo)</label><input type="number" step="0.01" id="precioMayoreo" name="precioMayoreo" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label for="ciudad_sucursal" class="block text-sm font-medium text-gray-700 mb-1">Ciudad / Sucursal</label><input type="text" id="ciudad_sucursal" name="ciudad_sucursal" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                                <div><label for="stock" class="block text-sm font-medium text-gray-700 mb-1">Cantidad (Stock)</label><input type="number" id="stock" name="stock" required class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><label for="cantidad" class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label><input type="number" id="cantidad" name="cantidad" required class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
-                                <div>
-                                    <label for="codigoBarras" class="block text-sm font-medium text-gray-700 mb-1">Código de Barras</label>
-                                    <div class="relative flex items-center">
-                                        <input type="text" id="codigoBarras" name="codigoBarras" class="w-full px-4 py-2 border border-gray-300 rounded-lg pr-12">
-                                        <button type="button" id="scan-inventory-btn" class="absolute right-0 top-0 h-full px-3 bg-gray-700 text-white rounded-r-lg hover:bg-gray-800 sm:hidden">
-                                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
-                                        </button>
-                                    </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div><label for="sale_price" class="block text-sm font-medium text-gray-700 mb-1">Precio (Venta)</label><input type="number" step="0.01" id="sale_price" name="sale_price" required class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                                <div><label for="purchase_price" class="block text-sm font-medium text-gray-700 mb-1">Precio (Compra)</label><input type="number" step="0.01" id="purchase_price" name="purchase_price" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                                <div><label for="wholesale_price" class="block text-sm font-medium text-gray-700 mb-1">Precio (Mayoreo)</label><input type="number" step="0.01" id="wholesale_price" name="wholesale_price" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                            </div>
+                            <div>
+                                <label for="barcode" class="block text-sm font-medium text-gray-700 mb-1">Código de Barras</label>
+                                <div class="relative flex items-center">
+                                    <input type="text" id="barcode" name="barcode" class="w-full px-4 py-2 border border-gray-300 rounded-lg pr-12">
+                                    <button type="button" id="scan-inventory-btn" class="absolute right-0 top-0 h-full px-3 bg-gray-700 text-white rounded-r-lg hover:bg-gray-800 sm:hidden">
+                                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div><label for="ciudadSucursal" class="block text-sm font-medium text-gray-700 mb-1">Ciudad/Sucursal</label><input type="text" id="ciudadSucursal" name="ciudadSucursal" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
-                                <div><label for="urlFoto1" class="block text-sm font-medium text-gray-700 mb-1">URL de la Foto</label><input type="text" id="urlFoto1" name="urlFoto1" placeholder="https://ejemplo.com/imagen.jpg" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
-                            </div>
+                            <div><label for="photo_url_1" class="block text-sm font-medium text-gray-700 mb-1">URL de la Foto</label><input type="text" id="photo_url_1" name="photo_url_1" placeholder="https://ejemplo.com/imagen.jpg" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
                             <div class="flex items-center justify-end pt-4 space-x-4">
                                 <button type="button" id="clear-inventory-form" class="inline-flex items-center justify-center px-8 py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600">Limpiar</button>
                                 <button type="submit" id="inventory-submit-button" class="inline-flex items-center justify-center px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
@@ -444,7 +452,7 @@
 
     <script>
         // --- GLOBAL APP STATE ---
-        const API_BASE_URL = '/netlify/functions';
+        const API_BASE_URL = '/.netlify/functions';
         
         let products = [];
         let sales = [];
@@ -461,8 +469,28 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('current-year').textContent = new Date().getFullYear();
             html5QrCode = new Html5Qrcode("reader");
-            initializeApp();
+            checkAuth();
         });
+        
+        function checkAuth() {
+            // Se simula un usuario admin para acceso directo
+            const user = { role: 'admin', fullName: 'Administrador' }; 
+            const appContainer = document.getElementById('app-container');
+
+            if (user) {
+                appContainer.classList.add('hidden'); 
+
+                document.getElementById('user-fullname').textContent = user.fullName || 'Usuario';
+                document.getElementById('user-role').textContent = user.role || 'Rol';
+                
+                initializeApp();
+            }
+        }
+        
+        function logout() {
+            // La función de logout ahora simplemente recarga la página
+            window.location.reload();
+        }
 
         async function initializeApp() {
             // Mostrar la aplicación inmediatamente para evitar la pantalla de carga
@@ -575,6 +603,8 @@
         }
 
         function setupEventListeners() {
+            document.getElementById('logout-button').addEventListener('click', logout);
+            
             const searchInput = document.getElementById('search-product');
             searchInput.addEventListener('input', handleSearch);
             searchInput.addEventListener('keydown', handleBarcodeScan);
@@ -645,37 +675,42 @@
             });
 
             document.getElementById('scan-pos-btn').addEventListener('click', () => startScanner('search-product'));
-            document.getElementById('scan-inventory-btn').addEventListener('click', () => startScanner('codigoBarras'));
+            document.getElementById('scan-inventory-btn').addEventListener('click', () => startScanner('barcode'));
             document.getElementById('scan-inventory-search-btn').addEventListener('click', () => startScanner('inventorySearchInput'));
             document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
         }
+        
+        // Mapeo de la base de datos (backend) al frontend
+        const mapProductToFrontend = (p) => ({
+            nombre: p.name,
+            sku: p.sku,
+            descripcion: p.description,
+            precioVenta: p.sale_price,
+            precioCompra: p.purchase_price,
+            precioMayoreo: p.wholesale_price,
+            cantidad: p.stock,
+            codigoBarras: p.barcode,
+            ciudadSucursal: p.ciudad_sucursal,
+            urlFoto1: p.photo_url_1
+        });
         
         async function fetchProducts() {
             try {
                 const response = await robustFetch(`${API_BASE_URL}/products`);
                 const result = await response.json();
-                if (result.status === 'success' && Array.isArray(result.data)) {
-                    // Mapeo de datos desde la base de datos (PostgreSQL) al formato que usa el frontend.
-                    products = result.data.map(p => ({
-                        nombre: p.name,
-                        sku: p.sku,
-                        precioVenta: p.sale_price,
-                        precioCompra: p.purchase_price,
-                        precioMayoreo: p.wholesale_price,
-                        cantidad: p.stock,
-                        codigoBarras: p.barcode,
-                        ciudadSucursal: p.ciudad_sucursal, // Mapeo del nuevo campo
-                        urlFoto1: p.photo_url_1,
-                        descripcion: p.description
-                    }));
+                if (result.status === 'success') {
+                    // Mapeamos los datos que vienen de la BD al formato del frontend
+                    products = result.data.map(mapProductToFrontend);
                 } else {
                     products = [];
+                    showNotification(result.message || "Error al cargar productos.", 'error');
                 }
             } catch (error) {
                 console.error("Fallo al cargar productos:", error);
                 showNotification("No se pudieron cargar los productos. Revisa tu conexión.", 'error');
             }
         }
+
 
         async function fetchSales() {
             try {
@@ -1037,20 +1072,6 @@
             const productData = {};
             formData.forEach((value, key) => { productData[key] = value; });
             
-            // Mapeo de datos desde el formulario del frontend al formato de la base de datos (PostgreSQL).
-            const dataForBackend = {
-                name: productData.nombre,
-                sku: productData.sku,
-                sale_price: productData.precioVenta,
-                purchase_price: productData.precioCompra,
-                wholesale_price: productData.precioMayoreo,
-                stock: productData.cantidad,
-                barcode: productData.codigoBarras,
-                ciudad_sucursal: productData.ciudadSucursal, // Mapeo del nuevo campo
-                photo_url_1: productData.urlFoto1,
-                originalSku: productData.originalSku // Necesario para la actualización (PUT)
-            };
-
             const isUpdating = productData.originalSku && productData.originalSku !== '';
             const method = isUpdating ? 'PUT' : 'POST';
             
@@ -1058,7 +1079,7 @@
                 const response = await robustFetch(`${API_BASE_URL}/products`, {
                     method: method,
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ data: dataForBackend })
+                    body: JSON.stringify({ data: productData })
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
@@ -1245,16 +1266,16 @@
 
         function populateInventoryForm(product) {
             document.getElementById('inventory-form-title').textContent = "Editando Producto";
-            document.getElementById('nombre').value = product.nombre || '';
+            document.getElementById('name').value = product.nombre || '';
             document.getElementById('sku').value = product.sku || '';
             document.getElementById('originalSku').value = product.sku || '';
-            document.getElementById('precioVenta').value = product.precioVenta || '';
-            document.getElementById('precioCompra').value = product.precioCompra || '';
-            document.getElementById('precioMayoreo').value = product.precioMayoreo || '';
-            document.getElementById('cantidad').value = product.cantidad || '';
-            document.getElementById('codigoBarras').value = product.codigoBarras || '';
-            document.getElementById('ciudadSucursal').value = product.ciudadSucursal || '';
-            document.getElementById('urlFoto1').value = product.urlFoto1 || '';
+            document.getElementById('sale_price').value = product.precioVenta || '';
+            document.getElementById('purchase_price').value = product.precioCompra || '';
+            document.getElementById('wholesale_price').value = product.precioMayoreo || '';
+            document.getElementById('stock').value = product.cantidad || '';
+            document.getElementById('barcode').value = product.codigoBarras || '';
+            document.getElementById('ciudad_sucursal').value = product.ciudadSucursal || '';
+            document.getElementById('photo_url_1').value = product.urlFoto1 || '';
             
             document.getElementById('inventory-button-text').textContent = 'Actualizar Producto';
             document.getElementById('inventory-form-container').scrollIntoView({ behavior: 'smooth' });
