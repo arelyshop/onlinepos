@@ -164,7 +164,10 @@
                     <p><strong>Sucursal:</strong> <span id="modalProductBranch" class="font-semibold"></span></p>
                     <p><strong>Stock:</strong> <span id="modalProductStock" class="font-semibold"></span></p>
                     <div class="mt-4 pt-4 border-t space-y-2">
-                        <p class="flex justify-between"><strong>Precio:</strong> <span id="modalProductPrice" class="font-semibold text-lg text-blue-600"></span></p>
+                        <p class="flex justify-between"><strong>Precio Regular:</strong> <span id="modalProductPrice" class="font-semibold text-lg text-gray-600"></span></p>
+                        <p id="discountPriceContainer" class="flex justify-between"><strong>Precio Descuento:</strong> <span id="modalProductDiscountPrice" class="font-semibold text-lg text-blue-600"></span></p>
+                        <p class="flex justify-between text-sm"><strong>Precio Compra:</strong> <span id="modalProductPurchasePrice" class="font-semibold"></span></p>
+                        <p class="flex justify-between text-sm"><strong>Precio Mayoreo:</strong> <span id="modalProductWholesalePrice" class="font-semibold"></span></p>
                     </div>
                 </div>
             </div>
@@ -355,6 +358,9 @@
             nombre: p.name,
             sku: p.sku,
             precioVenta: p.sale_price,
+            precioDescuento: p.discount_price,
+            precioCompra: p.purchase_price,
+            precioMayoreo: p.wholesale_price,
             cantidad: p.stock,
             codigoBarras: p.barcode,
             ciudadSucursal: p.ciudad_sucursal,
@@ -438,7 +444,10 @@
                     showNotification(`No se puede añadir más. Stock máximo: ${latestProductInfo.cantidad}`, 'error');
                 }
             } else {
-                cart.push({ ...latestProductInfo, quantity: 1, customPrice: parseFloat(latestProductInfo.precioVenta) });
+                const defaultPrice = (latestProductInfo.precioDescuento && parseFloat(latestProductInfo.precioDescuento) > 0)
+                               ? parseFloat(latestProductInfo.precioDescuento)
+                               : parseFloat(latestProductInfo.precioVenta);
+                cart.push({ ...latestProductInfo, quantity: 1, customPrice: defaultPrice });
             }
             
             document.getElementById('search-product').value = '';
@@ -676,7 +685,26 @@
             document.getElementById('modalProductCode').textContent = product.codigoBarras || 'N/A';
             document.getElementById('modalProductBranch').textContent = product.ciudadSucursal || 'N/A';
             document.getElementById('modalProductStock').textContent = product.cantidad || '0';
-            document.getElementById('modalProductPrice').textContent = `Bs. ${parseFloat(product.precioVenta || 0).toFixed(2)}`;
+            
+            const salePrice = parseFloat(product.precioVenta || 0).toFixed(2);
+            const discountPrice = parseFloat(product.precioDescuento || 0);
+            const purchasePrice = parseFloat(product.precioCompra || 0).toFixed(2);
+            const wholesalePrice = parseFloat(product.precioMayoreo || 0).toFixed(2);
+            
+            document.getElementById('modalProductPrice').textContent = `Bs. ${salePrice}`;
+            document.getElementById('modalProductPurchasePrice').textContent = `Bs. ${purchasePrice}`;
+            document.getElementById('modalProductWholesalePrice').textContent = `Bs. ${wholesalePrice}`;
+            
+            const discountContainer = document.getElementById('discountPriceContainer');
+            if (discountPrice > 0) {
+                document.getElementById('modalProductDiscountPrice').textContent = `Bs. ${discountPrice.toFixed(2)}`;
+                discountContainer.classList.remove('hidden');
+                document.getElementById('modalProductPrice').classList.add('line-through');
+            } else {
+                discountContainer.classList.add('hidden');
+                document.getElementById('modalProductPrice').classList.remove('line-through');
+            }
+
             document.getElementById('productDetailModal').classList.remove('hidden');
         }
 
@@ -800,6 +828,7 @@
     </script>
 </body>
 </html>
+
 
 
 
