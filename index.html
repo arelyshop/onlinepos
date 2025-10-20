@@ -129,7 +129,7 @@
                             <!-- QR Code Section -->
                             <div class="bg-white rounded-xl shadow-lg p-6 text-center">
                                 <h3 class="text-xl font-bold text-gray-800 mb-4">Escanea y paga</h3>
-                                <img id="pos-qr-code" src="https://lh3.googleusercontent.com/d/1fv9dO4VZI4-LbEj3klUu0EriSIw82nm0=w800?authuser=0" alt="Código QR para pago" class="w-full h-auto max-w-xs mx-auto rounded-lg cursor-pointer" onclick="showQrModal()" onerror="this.onerror=null; this.src='https://placehold.co/192x192/e2e8f0/94a3b8?text=QR';">
+                                <img id="pos-qr-code" src="/images/qr-pago.png" alt="Código QR para pago" class="w-full h-auto max-w-xs mx-auto rounded-lg cursor-pointer" onclick="showQrModal()" onerror="this.onerror=null; this.src='https://placehold.co/192x192/e2e8f0/94a3b8?text=QR';">
                             </div>
                             <!-- Go to Online Store Button (Mobile Only) -->
                             <div class="lg:hidden">
@@ -237,7 +237,7 @@
             await Promise.all([
                 fetchProducts(),
                 loadImageAsPngDataUrl('/images/logo-escritorio.svg').then(logo => preloadedLogo = logo),
-                loadImageAsJpegDataUrl('https://lh3.googleusercontent.com/d/1i08QtanwwFJ4yky2r2_smJL4ivBURTKG=w800?authuser=0').then(qr => preloadedPdfQr = qr)
+                loadImageAsJpegDataUrl('/images/qr-pdf.png').then(qr => preloadedPdfQr = qr)
             ]);
         }
         
@@ -590,7 +590,7 @@
 
             let textStartX = margin + 5;
             if (preloadedLogo) {
-                const logoH = 12; 
+                const logoH = 7.2; // Reducido en un 40% (antes era 12)
                 const logoW = (preloadedLogo.width / preloadedLogo.height) * logoH;
                 const logoY = margin + (headerH - logoH) / 2;
                 doc.addImage(preloadedLogo.dataURL, 'PNG', margin + 5, logoY, logoW, logoH, undefined, 'FAST');
@@ -647,7 +647,7 @@
             doc.setFontSize(10);
             const thankYouMessage = filePrefix === 'Cotizacion' ? "¡Gracias por su interés!" : "¡Gracias por su compra!";
             doc.text(thankYouMessage, pageW / 2, finalY + 30, { align: 'center' });
-            doc.text("Visita nuestra tienda online: arelyshopbo.mitiendanube.com", pageW / 2, finalY + 35, { align: 'center' });
+            doc.text("Visita nuestra tienda online: www.arelyshop.com", pageW / 2, finalY + 35, { align: 'center' });
             
             if (preloadedPdfQr) {
                 const qrSize = 25;
@@ -800,4 +800,6 @@
     </script>
 </body>
 </html>
+
+
 
