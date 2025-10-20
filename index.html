@@ -262,7 +262,10 @@
                                     </div>
                                 </div>
                             </div>
-                            <div><label for="urlFoto1" class="block text-sm font-medium text-gray-700 mb-1">URL de la Foto</label><input type="text" id="urlFoto1" name="urlFoto1" placeholder="https://ejemplo.com/imagen.jpg" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div><label for="ciudadSucursal" class="block text-sm font-medium text-gray-700 mb-1">Ciudad/Sucursal</label><input type="text" id="ciudadSucursal" name="ciudadSucursal" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                                <div><label for="urlFoto1" class="block text-sm font-medium text-gray-700 mb-1">URL de la Foto</label><input type="text" id="urlFoto1" name="urlFoto1" placeholder="https://ejemplo.com/imagen.jpg" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></div>
+                            </div>
                             <div class="flex items-center justify-end pt-4 space-x-4">
                                 <button type="button" id="clear-inventory-form" class="inline-flex items-center justify-center px-8 py-3 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-600">Limpiar</button>
                                 <button type="submit" id="inventory-submit-button" class="inline-flex items-center justify-center px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
@@ -369,6 +372,7 @@
                 <div class="space-y-3 text-gray-700 text-base">
                     <p class="flex items-center justify-between"><strong>SKU:</strong> <span class="bg-gray-100 px-2 py-1 rounded"><span id="modalProductSku"></span> <button class="copy-btn" data-copy-target="modalProductSku" title="Copiar SKU"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"></path><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"></path></svg></button></span></p>
                     <p class="flex items-center justify-between"><strong>Código:</strong> <span class="bg-gray-100 px-2 py-1 rounded"><span id="modalProductCode"></span> <button class="copy-btn" data-copy-target="modalProductCode" title="Copiar Código"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"></path><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"></path></svg></button></span></p>
+                    <p><strong>Sucursal:</strong> <span id="modalProductBranch" class="font-semibold"></span></p>
                     <p><strong>Stock:</strong> <span id="modalProductStock" class="font-semibold"></span></p>
                     <div class="mt-4 pt-4 border-t space-y-2">
                         <p class="flex justify-between"><strong>Precio:</strong> <span id="modalProductPrice" class="font-semibold text-lg text-blue-600"></span></p>
@@ -451,18 +455,14 @@
         let currentProductInModal = null;
         let html5QrCode = null; 
         let currentPdfBlob = null;
-        function logout() {
-            sessionStorage.removeItem('user');
-            products = [];
-            sales = [];
-            cart = [];
-            
-            // Reset tab visibility to default before showing login screen
-            document.getElementById('tab-inventory').style.display = 'flex';
-            document.getElementById('tab-reports').style.display = 'flex';
+        let currentPdfFileName = '';
 
-            checkAuth();
-        }
+        // --- AUTHENTICATION & INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+            html5QrCode = new Html5Qrcode("reader");
+            initializeApp();
+        });
 
         async function initializeApp() {
             // Mostrar la aplicación inmediatamente para evitar la pantalla de carga
@@ -575,8 +575,6 @@
         }
 
         function setupEventListeners() {
-            document.getElementById('logout-button').addEventListener('click', logout);
-            
             const searchInput = document.getElementById('search-product');
             searchInput.addEventListener('input', handleSearch);
             searchInput.addEventListener('keydown', handleBarcodeScan);
@@ -666,6 +664,7 @@
                         precioMayoreo: p.wholesale_price,
                         cantidad: p.stock,
                         codigoBarras: p.barcode,
+                        ciudadSucursal: p.ciudad_sucursal, // Mapeo del nuevo campo
                         urlFoto1: p.photo_url_1,
                         descripcion: p.description
                     }));
@@ -740,13 +739,13 @@
                     div.onclick = () => addToCart(p);
                     resultsContainer.appendChild(div);
                 });
-            tabs.pos.content.style.display = 'block';
+            } else {
+                resultsContainer.innerHTML = '<div class="p-3 text-gray-500">No se encontraron productos</div>';
+            }
         }
 
-        function setupEventListeners() {
-            const searchInput = document.getElementById('search-product');
-            searchInput.addEventListener('input', handleSearch);
-            searchInput.addEventListener('keydown', handleBarcodeScan);
+        function addToCart(product) {
+            const latestProductInfo = products.find(p => p.sku === product.sku && p.nombre === product.nombre);
             
             if (!latestProductInfo || latestProductInfo.cantidad <= 0) {
                 showNotification('Este producto no tiene stock disponible.', 'error');
@@ -1047,6 +1046,7 @@
                 wholesale_price: productData.precioMayoreo,
                 stock: productData.cantidad,
                 barcode: productData.codigoBarras,
+                ciudad_sucursal: productData.ciudadSucursal, // Mapeo del nuevo campo
                 photo_url_1: productData.urlFoto1,
                 originalSku: productData.originalSku // Necesario para la actualización (PUT)
             };
@@ -1233,6 +1233,7 @@
             document.getElementById('modalProductName').textContent = product.nombre || 'Sin Nombre';
             document.getElementById('modalProductSku').textContent = product.sku || 'N/A';
             document.getElementById('modalProductCode').textContent = product.codigoBarras || 'N/A';
+            document.getElementById('modalProductBranch').textContent = product.ciudadSucursal || 'N/A';
             document.getElementById('modalProductStock').textContent = product.cantidad || '0';
             document.getElementById('modalProductPrice').textContent = `Bs. ${parseFloat(product.precioVenta || 0).toFixed(2)}`;
             document.getElementById('modalProductCost').textContent = `Bs. ${parseFloat(product.precioCompra || 0).toFixed(2)}`;
@@ -1252,6 +1253,7 @@
             document.getElementById('precioMayoreo').value = product.precioMayoreo || '';
             document.getElementById('cantidad').value = product.cantidad || '';
             document.getElementById('codigoBarras').value = product.codigoBarras || '';
+            document.getElementById('ciudadSucursal').value = product.ciudadSucursal || '';
             document.getElementById('urlFoto1').value = product.urlFoto1 || '';
             
             document.getElementById('inventory-button-text').textContent = 'Actualizar Producto';
@@ -1530,3 +1532,4 @@
     </script>
 </body>
 </html>
+
