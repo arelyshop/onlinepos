@@ -1,0 +1,19 @@
+{
+  "name": "arelyshop-pos-backend",
+  "version": "1.0.0",
+  "description": "Netlify functions for the ArelyShop POS system.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "netlify",
+    "serverless",
+    "pos"
+  ],
+  "author": "ArelyShop",
+  "license": "ISC",
+  "dependencies": {
+    "pg": "^8.11.3"
+  }
+}
