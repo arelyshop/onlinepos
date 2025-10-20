@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const newProductBtn = document.getElementById('new-product-btn');
         const saveBtn = document.getElementById('save-btn');
         const deleteBtn = document.getElementById('delete-btn');
-        const statusMessageEl = document.getElementById('status-message');
         const suggestSkuBtn = document.getElementById('suggest-sku-btn');
         const skuInput = document.getElementById('sku');
         const categorySelect = document.getElementById('category-select');
@@ -41,10 +40,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const imageSortableList = document.getElementById('image-sortable-list');
         const singleImageInputsContainer = document.getElementById('single-image-inputs-container');
         const addSingleUrlFieldBtn = document.getElementById('add-single-url-field-btn');
+        const csvFileInput = document.getElementById('csv-file-input');
+        const importCsvBtn = document.getElementById('import-csv-btn');
+        const csvLogs = document.getElementById('csv-logs');
+
 
         const API_URL = '/.netlify/functions/products'; // RESTful endpoint
 
         // --- FUNCTIONS ---
+        
+        const showNotification = (message, type = 'success') => {
+            const banner = document.getElementById('notification-banner');
+            const messageSpan = document.getElementById('notification-message');
+            if (!banner || !messageSpan) return;
+
+            messageSpan.textContent = message;
+            banner.className = 'fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg'; // Reset classes
+            
+            if (type === 'success') {
+                banner.classList.add('bg-green-600');
+            } else {
+                banner.classList.add('bg-red-600');
+            }
+            
+            banner.style.transform = 'translateY(0)';
+            
+            setTimeout(() => {
+                banner.style.transform = 'translateY(-120%)';
+            }, 4000);
+        };
+
 
         const updateImageNumbers = () => {
             const imageItems = imageSortableList.querySelectorAll('div[data-url]');
@@ -65,10 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const addUrlToSorter = (url) => {
             if (!url) return;
-            // Prevent adding duplicate URLs
             const existingUrls = Array.from(imageSortableList.querySelectorAll('div[data-url]')).map(div => div.dataset.url);
             if (existingUrls.includes(url)) {
-                alert('Esta URL ya ha sido agregada.');
+                showNotification('Esta URL ya ha sido agregada.', 'error');
                 return;
             }
 
@@ -144,7 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error('Error fetching products:', error);
-                productListEl.innerHTML = `<p class="text-red-500">Error al cargar productos: ${error.message}</p>`;
+                productListEl.innerHTML = `<p class="text-red-500">Error al cargar productos.</p>`;
+                showNotification('Error al cargar productos. Revisa la conexión y la consola.', 'error');
             }
         };
 
@@ -177,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!product) return;
             resetForm();
             currentProductId = productId;
-            // Use the 'id' field for the hidden input
             productForm.elements['id'].value = product.id;
 
             for (const key in product) {
@@ -186,16 +210,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Specifically set the value for the select element
-            if(product.ciudad_sucursal) {
+            if (product.ciudad_sucursal) {
                 productForm.elements['ciudad_sucursal'].value = product.ciudad_sucursal;
             }
 
             const imageUrls = [];
             for (let i = 1; i <= 8; i++) {
-                if (product[`photo_url_${i}`]) {
-                    imageUrls.push(product[`photo_url_${i}`]);
-                }
+                if (product[`photo_url_${i}`]) { imageUrls.push(product[`photo_url_${i}`]); }
             }
             imageSortableList.innerHTML = '';
             imageUrls.forEach(url => addUrlToSorter(url));
@@ -237,8 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
             formTitle.textContent = 'Agregar Nuevo Producto';
             saveBtn.textContent = 'Guardar Producto';
             deleteBtn.classList.add('hidden');
-            statusMessageEl.textContent = '';
-            statusMessageEl.className = 'mt-4 text-center font-semibold';
             categoryCustomInput.classList.add('hidden');
             brandCustomInput.classList.add('hidden');
             imageSortableList.innerHTML = '';
@@ -247,7 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
             imageUrlList.value = '';
             renderProductList(allProducts);
 
-            // Mobile view reset
             if (window.innerWidth < 1024) {
                 productFormContainer.classList.add('hidden');
                 productListContainer.classList.remove('hidden');
@@ -259,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             saveBtn.disabled = true;
             saveBtn.textContent = 'Guardando...';
-            statusMessageEl.textContent = '';
 
             const formData = new FormData(productForm);
             const productData = Object.fromEntries(formData.entries());
@@ -280,8 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             numericFields.forEach(field => {
                 productData[field] = productData[field] === '' ? null : Number(productData[field]);
             });
-
-            // The id is already in productData from the hidden form field
+            
             const isUpdating = !!productData.id;
             const method = isUpdating ? 'PUT' : 'POST';
 
@@ -295,19 +311,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const errorText = await response.text();
                     throw new Error(JSON.parse(errorText).message || errorText);
                 }
-                statusMessageEl.textContent = `¡Producto ${isUpdating ? 'actualizado' : 'agregado'} con éxito!`;
-                statusMessageEl.className = 'mt-4 text-center font-semibold text-green-600';
+                showNotification(`¡Producto ${isUpdating ? 'actualizado' : 'agregado'} con éxito!`, 'success');
                 await fetchAndRenderProducts();
                 setTimeout(() => {
                     resetForm();
                     if (window.innerWidth < 1024) {
                         productListContainer.scrollIntoView({ behavior: 'smooth' });
                     }
-                }, 2000);
+                }, 1500);
             } catch (error) {
                 console.error('Error saving product:', error);
-                statusMessageEl.textContent = `Error: ${error.message}`;
-                statusMessageEl.className = 'mt-4 text-center font-semibold text-red-600';
+                showNotification(`Error: ${error.message}`, 'error');
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.textContent = isUpdating ? 'Guardar Cambios' : 'Guardar Producto';
@@ -330,19 +344,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(errorData.message || 'Server error');
                 }
                 const result = await response.json();
-                statusMessageEl.textContent = result.message || 'Producto eliminado.';
-                statusMessageEl.className = 'mt-4 text-center font-semibold text-green-600';
+                showNotification(result.message || 'Producto eliminado.', 'success');
                 await fetchAndRenderProducts();
                 setTimeout(() => {
                     resetForm();
                     if (window.innerWidth < 1024) {
                         productListContainer.scrollIntoView({ behavior: 'smooth' });
                     }
-                }, 2000);
+                }, 1500);
             } catch (error) {
                 console.error('Error deleting product:', error);
-                statusMessageEl.textContent = `Error: ${error.message}`;
-                statusMessageEl.className = 'mt-4 text-center font-semibold text-red-600';
+                showNotification(`Error: ${error.message}`, 'error');
             } finally {
                 deleteBtn.disabled = false;
                 deleteBtn.textContent = 'Eliminar Producto';
@@ -389,11 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => {
-                    console.log("QR Code scanning stopped.");
-                }).catch(err => {
-                    console.log(`Error stopping scan: ${err}`);
-                });
+                html5QrCode.stop().then(() => {}).catch(err => {});
             }
             scannerContainer.classList.add('hidden');
             scannerContainer.classList.remove('flex');
@@ -410,6 +418,76 @@ document.addEventListener('DOMContentLoaded', () => {
             imagePreviewModal.classList.add('hidden');
             previewImage.src = '';
         }
+
+        const handleCsvUpload = () => {
+            const file = csvFileInput.files[0];
+            if (!file) {
+                showNotification('Por favor, selecciona un archivo CSV.', 'error');
+                return;
+            }
+
+            importCsvBtn.disabled = true;
+            importCsvBtn.textContent = 'Importando...';
+            const logContainer = csvLogs.querySelector('pre');
+            csvLogs.classList.remove('hidden');
+            logContainer.textContent = 'Procesando archivo...\n';
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: async (results) => {
+                    logContainer.textContent += `Archivo CSV leído. ${results.data.length} filas encontradas.\n`;
+                    
+                    const products = results.data.map(row => {
+                        // Limpiar y validar datos de la fila
+                        const cleanedRow = {};
+                        for (const key in row) {
+                            const value = row[key];
+                            cleanedRow[key] = (value === "" || value === undefined) ? null : value;
+                        }
+                        return cleanedRow;
+                    }).filter(p => p.sku || p.name); // Filtrar filas sin SKU o nombre
+
+                    if (products.length === 0) {
+                        logContainer.textContent += `No se encontraron productos válidos para importar.\n`;
+                        showNotification('El archivo CSV no contiene productos válidos.', 'error');
+                        importCsvBtn.disabled = false;
+                        importCsvBtn.textContent = 'Importar CSV';
+                        return;
+                    }
+
+
+                    logContainer.textContent += `Enviando ${products.length} productos al servidor...\n`;
+                    try {
+                        const response = await fetch('/.netlify/functions/products-batch', {
+                            method: 'POST',
+                            body: JSON.stringify({ products }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message || 'Error en el servidor');
+                        
+                        logContainer.textContent += `Proceso completado con éxito.\n`;
+                        logContainer.textContent += `- ${result.details}\n`;
+                        showNotification(result.message, 'success');
+                        await fetchAndRenderProducts(); // Refresh list
+                    } catch (error) {
+                        logContainer.textContent += `Error en el servidor: ${error.message}\n`;
+                        showNotification('Hubo un error al importar el CSV.', 'error');
+                    } finally {
+                        importCsvBtn.disabled = false;
+                        importCsvBtn.textContent = 'Importar CSV';
+                        csvFileInput.value = '';
+                    }
+                },
+                error: (error) => {
+                    logContainer.textContent += `Error al leer el archivo CSV: ${error.message}\n`;
+                    showNotification('No se pudo leer el archivo CSV.', 'error');
+                    importCsvBtn.disabled = false;
+                    importCsvBtn.textContent = 'Importar CSV';
+                }
+            });
+        };
 
         // --- EVENT LISTENERS ---
         productForm.addEventListener('submit', handleFormSubmit);
@@ -469,6 +547,12 @@ document.addEventListener('DOMContentLoaded', () => {
             brandCustomInput.classList.toggle('hidden', e.target.value !== 'custom');
             if (e.target.value === 'custom') brandCustomInput.focus();
         });
+
+        csvFileInput.addEventListener('change', () => {
+             importCsvBtn.disabled = !csvFileInput.files.length;
+        });
+
+        importCsvBtn.addEventListener('click', handleCsvUpload);
 
         // --- INITIALIZATION ---
         fetchAndRenderProducts();
