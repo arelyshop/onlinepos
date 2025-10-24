@@ -19,6 +19,48 @@
         body { font-family: 'Inter', sans-serif; }
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3b82f6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Tab Styling */
+        .tab-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem 0.25rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .tab-button svg {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 0.25rem;
+        }
+
+        @media (min-width: 640px) {
+            .tab-button {
+                flex-direction: row;
+                font-size: 0.875rem;
+                line-height: 1.25rem;
+                padding: 0.5rem 0.75rem;
+                flex-grow: 0;
+            }
+            .tab-button svg {
+                margin-bottom: 0;
+                margin-right: 0.5rem;
+            }
+        }
+
+        .tab-inactive { border-color: transparent; color: #6b7280; }
+        .tab-inactive svg { fill: #6b7280; }
+
+        #tab-pos.tab-active { border-color: #2563eb; color: #2563eb; font-weight: 600; }
+        #tab-pos.tab-active svg { fill: #2563eb; }
+
+        #tab-sales-registry.tab-active { border-color: #16a34a; color: #16a34a; font-weight: 600; }
+        #tab-sales-registry.tab-active svg { fill: #16a34a; }
+        
+        .tab-content { display: none; }
         .copy-btn { background: none; border: none; cursor: pointer; margin-left: 8px; color: #6b7280; }
         .copy-btn:hover { color: #2c3c53; }
         #scanner-modal #reader {
@@ -36,7 +78,7 @@
 <body class="bg-gray-100">
 
     <!-- Login Screen -->
-    <div id="login-container" class="hidden min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+    <div id="login-container" class="flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div class="max-w-md w-full space-y-8 p-10 rounded-xl shadow-lg border border-gray-700" style="background-color: #202c34;">
             <div>
                 <img class="mx-auto h-10 sm:h-12 w-auto" src="/images/logo-escritorio.svg" alt="ArelyShop">
@@ -44,39 +86,38 @@
                      <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#e3e3e3"><path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z"/></svg>
                 </div>
                 <h2 class="mt-4 text-center text-3xl font-extrabold text-gray-100">
-                    Iniciar sesión POS
+                    Iniciar sesión
                 </h2>
             </div>
             <form id="login-form" class="mt-8 space-y-6">
                 <div class="rounded-md shadow-sm -space-y-px">
                     <div>
                         <label for="username" class="sr-only">Usuario</label>
-                        <input id="username" name="username" type="text" autocomplete="username" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Usuario">
+                        <input id="username" name="username" type="text" autocomplete="username" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Usuario">
                     </div>
                     <div>
                         <label for="password" class="sr-only">Contraseña</label>
-                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Contraseña">
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Contraseña">
                     </div>
                 </div>
 
                 <div>
-                    <button type="submit" id="login-button" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                    <button type="submit" id="login-button" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         <span id="login-button-text">Ingresar</span>
-                        <div id="login-loader" class="loader hidden ml-3"></div>
+                        <div id="login-loader" class="loader hidden"></div>
                     </button>
                 </div>
-                <p id="error-message" class="mt-2 text-center text-sm text-red-500"></p>
+                <p id="error-message" class="mt-2 text-center text-sm text-red-600"></p>
             </form>
         </div>
     </div>
-
 
     <!-- Notification Banner -->
     <div id="notification-banner" class="fixed top-0 left-0 right-0 p-4 text-white text-center z-50">
         <span id="notification-message"></span>
     </div>
 
-    <!-- App Container (Initially hidden until login) -->
+    <!-- App Container -->
     <div id="app-container" class="hidden flex-col min-h-screen">
         <header class="bg-gray-800 text-white shadow-md">
             <div class="container mx-auto p-4 flex justify-between items-center">
@@ -86,11 +127,11 @@
                 </div>
                  <div class="flex items-center space-x-4">
                     <div id="user-info" class="text-right">
-                         <p class="font-semibold text-sm" id="user-fullname"></p> <!-- Para mostrar nombre completo -->
-                         <p class="text-xs text-gray-400" id="user-role"></p> <!-- Para mostrar rol (opcional) -->
+                         <p class="font-semibold text-sm" id="user-fullname"></p>
+                         <p class="text-xs text-gray-400" id="user-role"></p>
                     </div>
                     <button id="logout-button" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#FFFFFF" class="mr-1"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3" class="mr-1"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
                         Salir
                     </button>
                 </div>
@@ -99,8 +140,22 @@
 
         <main class="flex-grow">
             <div class="container mx-auto p-4 md:p-8">
+                <!-- Tab Navigation -->
+                <div class="mb-8 border-b border-gray-200">
+                    <nav class="flex justify-center space-x-0 sm:space-x-4" aria-label="Tabs">
+                        <button id="tab-pos" class="text-sm font-medium border-b-2 tab-active tab-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
+                            <span>Punto de Venta</span>
+                        </button>
+                        <button id="tab-sales-registry" class="text-sm font-medium border-b-2 tab-inactive tab-button">
+                           <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M200-120q-33 0-56.5-23.5T120-200v-640h80v640h640v80H200Zm40-120v-360h160v360H240Zm200 0v-560h160v560H440Zm200 0v-200h160v200H640Z"/></svg>
+                            <span>Registro de Ventas</span>
+                        </button>
+                    </nav>
+                </div>
+
                 <!-- Tab: Point of Sale -->
-                <div id="content-pos">
+                <div id="content-pos" class="tab-content">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div class="lg:col-span-2 bg-white rounded-xl shadow-lg overflow-hidden">
                             <div class="p-6 flex justify-between items-center" style="background-color: #2c3c53; color: white;">
@@ -159,16 +214,16 @@
                                 </form>
                                 <div class="border-t border-gray-200 mt-6 pt-6">
                                     <div class="flex justify-between items-center text-2xl font-bold text-gray-800"><span>TOTAL:</span><span id="total-amount">Bs 0.00</span></div>
-                                    <button id="finalize-sale-button" class="mt-6 w-full inline-flex items-center justify-center px-8 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-200 shadow-lg disabled:bg-gray-400">
+                                    <button id="complete-sale-button" class="mt-6 w-full inline-flex items-center justify-center px-8 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-200 shadow-lg disabled:bg-gray-400">
                                         <span id="sale-button-text" class="inline-flex items-center justify-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" class="mr-2"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
-                                            Generar Nota
+                                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" class="mr-2"><path d="M380-320q-106 0-181-75T124-576q0-102 60-182.5T340-880q22 0 38 10t24 26q-2 10-10.5 32T370-782q-47 31-77 79t-30 107q0 64 43.5 109T412-440h136q8 0 14-6t6-14v-28q0-23 12.5-41.5T614-558q19-11 41-11h45q4 0 7.5 1.5T712-564q3 3 4.5 6.5T720-550v270q0 33-23.5 56.5T640-200H480q-17 0-28.5-11.5T440-240v-80h-60Zm400 80v-160q0-17-11.5-28.5T740-440H614q-19-11-41-11h-45q-4 0-7.5 1.5T516-448q-3 3-4.5 6.5T508-434v114H412q-85 0-145-59.5T207-526q0-68 39-122t103-82q-10-18-10.5-38t6.5-38q-15-8-25.5-22t-10.5-32q-73 53-116.5 135.5T80-576q0 146 92.5 247T380-240h260v80q0 17 11.5 28.5T680-120h80q33 0 56.5-23.5T840-200v-240h-80Z"/></svg>
+                                            Completar Venta y Guardar
                                         </span>
                                         <div id="sale-loader" class="loader hidden"></div>
                                     </button>
                                     <button id="generate-quote-button" class="mt-2 w-full inline-flex items-center justify-center px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-200 shadow-lg disabled:bg-gray-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" class="mr-2"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560h600v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-600H320v480h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h360v80H360Zm0 120v-80h360v80H360ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm0 0h-40 400-360Z"/></svg>
-                                        Cotización
+                                        Solo Cotización
                                     </button>
                                 </div>
                             </div>
@@ -187,6 +242,18 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Tab: Sales Registry -->
+                <div id="content-sales-registry" class="tab-content">
+                    <div class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Registro de Ventas</h2>
+                        <input type="text" id="search-sales-input" placeholder="Buscar por Nro. Venta, Cliente, Contacto o Vendedor..." class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-6">
+                        <div id="sales-results-container" class="space-y-4 max-h-[70vh] overflow-y-auto">
+                            <!-- Sales results will be injected here -->
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
         
@@ -262,21 +329,21 @@
         const API_BASE_URL = '/.netlify/functions';
         
         let products = [];
+        let sales = [];
         let cart = [];
         let preloadedLogo = null;
         let preloadedPdfQr = null; 
-        let currentProductInModal = null;
         let html5QrCode = null; 
         let currentPdfBlob = null;
         let currentPdfFileName = '';
-        let currentUser = null; // Para guardar la información del usuario logueado
+        let currentUser = null; // Almacenará los datos del usuario logueado
 
         // --- AUTHENTICATION & INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('current-year').textContent = new Date().getFullYear();
             html5QrCode = new Html5Qrcode("reader");
-            checkAuth(); // Verifica si ya hay una sesión activa
             setupLoginListener();
+            checkAuth();
             document.getElementById('logout-button').addEventListener('click', logout);
         });
 
@@ -298,7 +365,7 @@
                 const password = document.getElementById('password').value;
 
                 try {
-                    const response = await fetch(`${API_BASE_URL}/login`, {
+                    const response = await robustFetch(`${API_BASE_URL}/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username, password }),
@@ -307,9 +374,10 @@
                     const result = await response.json();
 
                     if (response.ok && result.status === 'success') {
-                        // Guarda la información del usuario en sessionStorage
+                        // Guardar usuario en sessionStorage
                         sessionStorage.setItem('arelyShopUser', JSON.stringify(result.user));
-                        checkAuth(); // Llama a checkAuth para mostrar la app
+                        currentUser = result.user;
+                        initializeApp();
                     } else {
                         errorMessage.textContent = result.message || 'Credenciales incorrectas.';
                     }
@@ -323,80 +391,81 @@
                 }
             });
         }
-
+        
         function checkAuth() {
-            const userData = sessionStorage.getItem('arelyShopUser');
-            const loginContainer = document.getElementById('login-container');
-            const appContainer = document.getElementById('app-container');
-
-            if (userData) {
-                currentUser = JSON.parse(userData);
-                loginContainer.classList.add('hidden');
-                loginContainer.classList.remove('flex'); // Asegura quitar flex
-                appContainer.classList.remove('hidden');
-                appContainer.classList.add('flex'); // Mostrar la app
-
-                // Muestra el nombre y rol del usuario
-                document.getElementById('user-fullname').textContent = currentUser.full_name || currentUser.username;
-                document.getElementById('user-role').textContent = currentUser.role || 'Usuario';
-
-                initializeApp(); // Inicia la carga de datos de la app
+            const userString = sessionStorage.getItem('arelyShopUser');
+            if (userString) {
+                currentUser = JSON.parse(userString);
+                initializeApp();
             } else {
-                currentUser = null;
-                loginContainer.classList.remove('hidden');
-                loginContainer.classList.add('flex'); // Mostrar login
-                appContainer.classList.add('hidden');
-                appContainer.classList.remove('flex'); // Ocultar la app
+                document.getElementById('login-container').classList.remove('hidden');
+                document.getElementById('app-container').classList.add('hidden');
             }
         }
 
         function logout() {
             sessionStorage.removeItem('arelyShopUser');
-            // Limpia variables de estado si es necesario
-            products = [];
-            cart = [];
             currentUser = null;
-            checkAuth(); // Vuelve a mostrar la pantalla de login
+            products = [];
+            sales = [];
+            cart = [];
+            
+            document.getElementById('login-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
+            
+            // Resetear UI
+            document.getElementById('cart-items').innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
+            document.getElementById('sales-results-container').innerHTML = '';
+            document.getElementById('customer-form').reset();
+            updateTotal();
         }
 
-
         async function initializeApp() {
-            // Ya no es necesario mostrar el contenedor aquí, checkAuth lo hace
+            // Ocultar login y mostrar app
+            document.getElementById('login-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('flex');
+
+            // Mostrar info del usuario
+            document.getElementById('user-fullname').textContent = currentUser.full_name || 'Usuario';
+            document.getElementById('user-role').textContent = currentUser.role || 'Rol';
+
+            // Configurar Pestañas y Eventos
+            initTabs();
             setupEventListeners();
             updateDateTime();
             setInterval(updateDateTime, 60000); 
 
+            // Cargar datos en paralelo
             await Promise.all([
                 fetchProducts(),
+                fetchSales(),
                 loadImageAsPngDataUrl('/images/logo-escritorio.svg').then(logo => preloadedLogo = logo),
                 loadImageAsJpegDataUrl('/images/qr-pdf.webp').then(qr => preloadedPdfQr = qr)
             ]);
+
+            // Renderizar datos una vez cargados
+            renderSalesResults();
+            displayNextSaleId();
         }
         
         function updateDateTime() {
             const now = new Date();
-            document.getElementById('current-date').textContent = now.toLocaleDateString('es-BO');
-            // Genera un ID simple basado en la fecha y hora para el placeholder
-            const tempId = `T${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
-            document.getElementById('current-sale-id').textContent = tempId;
+            const dateOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('es-ES', dateOptions);
         }
 
-        // --- NETWORKING & UI FUNCTIONS ---
+        // --- ROBUST NETWORKING & UI FUNCTIONS ---
         async function robustFetch(url, options, maxRetries = 3) {
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) {
-                        if (response.status === 401) { // Unauthorized
-                           console.warn("Sesión expirada o inválida. Redirigiendo al login.");
-                           logout(); // Cierra sesión si la API devuelve no autorizado
-                           throw new Error('Unauthorized');
-                        }
-                        throw new Error(`Error HTTP: ${response.status}`);
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || `Error HTTP: ${response.status}`);
                     }
                     return response;
                 } catch (error) {
-                     if (error.message === 'Unauthorized') throw error; // No reintentar si es 401
                     console.warn(`Intento ${attempt + 1} fallido: ${error.message}`);
                     if (attempt + 1 >= maxRetries) {
                         console.error("Todos los intentos de fetch fallaron.");
@@ -408,20 +477,15 @@
             }
         }
 
-        function showNotification(message, type = 'success') { // Cambiado a success por defecto
+        function showNotification(message, type) {
             const banner = document.getElementById('notification-banner');
             const messageSpan = document.getElementById('notification-message');
             messageSpan.textContent = message;
-            // Usa clases específicas para éxito y error
-            banner.className = 'fixed top-0 left-0 right-0 p-4 text-white text-center z-50 transition-transform duration-500 ease-in-out transform -translate-y-full';
-            if (type === 'success') {
-                banner.classList.add('bg-green-600');
-            } else { // Asume 'error' para cualquier otra cosa
-                banner.classList.add('bg-red-600');
-            }
-            banner.style.transform = 'translateY(0)'; // Muestra el banner
+            banner.className = 'fixed top-0 left-0 right-0 p-4 text-white text-center z-50';
+            banner.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600');
+            banner.style.transform = 'translateY(0)';
             setTimeout(() => {
-                banner.style.transform = 'translateY(-100%)'; // Oculta el banner
+                banner.style.transform = 'translateY(-100%)';
             }, 4000);
         }
 
@@ -455,14 +519,39 @@
             img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
         });
         
-        function setupEventListeners() {
-             // Listener de Login y Logout ya están en DOMContentLoaded
+        function initTabs() {
+            const tabs = {
+                pos: { btn: document.getElementById('tab-pos'), content: document.getElementById('content-pos') },
+                salesRegistry: { btn: document.getElementById('tab-sales-registry'), content: document.getElementById('content-sales-registry') }
+            };
 
+            Object.keys(tabs).forEach(key => {
+                tabs[key].btn.addEventListener('click', () => {
+                    Object.values(tabs).forEach(t => {
+                        t.btn.classList.remove('tab-active');
+                        t.btn.classList.add('tab-inactive');
+                        t.content.style.display = 'none';
+                    });
+                    tabs[key].btn.classList.add('tab-active');
+                    tabs[key].btn.classList.remove('tab-inactive');
+                    tabs[key].content.style.display = 'block';
+                    if (key === 'salesRegistry') renderSalesResults();
+                });
+            });
+            // Asegurarse de que el tab de POS esté activo al inicio
+            tabs.pos.btn.classList.add('tab-active');
+            tabs.pos.btn.classList.remove('tab-inactive');
+            tabs.pos.content.style.display = 'block';
+            tabs.salesRegistry.content.style.display = 'none';
+        }
+
+        function setupEventListeners() {
             const searchInput = document.getElementById('search-product');
             searchInput.addEventListener('input', handleSearch);
             searchInput.addEventListener('keydown', handleBarcodeScan);
 
-            document.getElementById('finalize-sale-button').addEventListener('click', completeSale);
+            document.getElementById('search-sales-input').addEventListener('input', renderSalesResults);
+            document.getElementById('complete-sale-button').addEventListener('click', completeSale);
             document.getElementById('generate-quote-button').addEventListener('click', handleGenerateQuote);
 
             document.getElementById('closeProductModal').addEventListener('click', () => document.getElementById('productDetailModal').classList.add('hidden'));
@@ -495,8 +584,8 @@
             document.getElementById('scan-pos-btn').addEventListener('click', () => startScanner('search-product'));
             document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
         }
-        
-        // Mapeo entre nombres de columna DB y nombres de propiedad JS
+
+        // --- DATA MAPPING ---
         const mapProductToFrontend = (p) => ({
             nombre: p.name,
             sku: p.sku,
@@ -508,33 +597,54 @@
             codigoBarras: p.barcode,
             ciudadSucursal: p.ciudad_sucursal,
             urlFoto1: p.photo_url_1
-            // Añade más URLs de fotos si es necesario
         });
         
         async function fetchProducts() {
-            // Solo intentar cargar productos si el usuario está logueado
-            if (!currentUser) {
-                 console.log("Usuario no logueado, saltando carga de productos.");
-                 return;
-            }
             try {
-                // Incluye el token de sesión si tu API lo requiere (ej. usando Bearer token)
-                // const headers = { 'Authorization': `Bearer ${currentUser.token}` }; // Ejemplo
-                const response = await robustFetch(`${API_BASE_URL}/products`); // , { headers }); // Ejemplo con header
+                const response = await robustFetch(`${API_BASE_URL}/products`);
                 const result = await response.json();
-                if (result.status === 'success') {
-                    products = result.data.map(mapProductToFrontend);
-                    console.log("Productos cargados:", products.length);
-                } else {
-                    products = [];
-                    showNotification(result.message || "Error al cargar productos.", 'error');
-                }
+                products = result.status === 'success' ? result.data.map(mapProductToFrontend) : [];
             } catch (error) {
                 console.error("Fallo al cargar productos:", error);
-                 if (error.message !== 'Unauthorized') { // No mostrar notificación si ya se hizo logout
-                    showNotification("No se pudieron cargar los productos. Revisa tu conexión.", 'error');
-                 }
+                showNotification("No se pudieron cargar los productos. Revisa tu conexión.", 'error');
             }
+        }
+
+        async function fetchSales() {
+            try {
+                const response = await robustFetch(`${API_BASE_URL}/sales`);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    sales = result.data;
+                }
+            } catch (error) {
+                console.error("Fallo al cargar las ventas:", error);
+                showNotification("No se pudieron cargar las ventas. Revisa tu conexión.", 'error');
+            }
+        }
+        
+        function displayNextSaleId() {
+            let nextId = "AS1";
+            if (sales.length > 0) {
+                // Ordenar ventas por fecha (o ID numérico) para encontrar la última
+                const sortedSales = [...sales].sort((a, b) => {
+                    const aNum = parseInt(a.saleId.substring(2));
+                    const bNum = parseInt(b.saleId.substring(2));
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        return aNum - bNum;
+                    }
+                    // Fallback si los IDs no son numéricos
+                    return new Date(b.fechaVenta) - new Date(a.fechaVenta);
+                });
+                
+                const lastSaleId = sortedSales[sortedSales.length - 1].saleId;
+                const lastIdNumber = parseInt(lastSaleId.substring(2));
+                
+                if (!isNaN(lastIdNumber)) {
+                    nextId = 'AS' + (lastIdNumber + 1);
+                }
+            }
+            document.getElementById('current-sale-id').textContent = nextId;
         }
 
         function handleBarcodeScan(e) {
@@ -570,11 +680,7 @@
                 filteredProducts.forEach(p => {
                     const div = document.createElement('div');
                     div.className = 'p-3 hover:bg-gray-100 cursor-pointer';
-                    // Muestra precio de venta o descuento si existe
-                     const displayPrice = (p.precioDescuento && parseFloat(p.precioDescuento) > 0)
-                                      ? p.precioDescuento
-                                      : p.precioVenta;
-                    div.textContent = `${p.nombre} (Bs ${parseFloat(displayPrice).toFixed(2)}) - Stock: ${p.cantidad}`;
+                    div.textContent = `${p.nombre} (Bs ${p.precioVenta}) - Stock: ${p.cantidad}`;
                     div.onclick = () => addToCart(p);
                     resultsContainer.appendChild(div);
                 });
@@ -584,7 +690,6 @@
         }
 
         function addToCart(product) {
-            // Vuelve a buscar la info más reciente del producto desde 'products'
             const latestProductInfo = products.find(p => p.sku === product.sku && p.nombre === product.nombre);
             
             if (!latestProductInfo || latestProductInfo.cantidad <= 0) {
@@ -597,41 +702,36 @@
             const existingCartItem = cart.find(item => item.sku === product.sku && item.nombre === product.nombre);
 
             if (existingCartItem) {
-                 // Asegúrate de que no exceda el stock actual
                 if (existingCartItem.quantity < latestProductInfo.cantidad) {
                     existingCartItem.quantity++;
                 } else {
                     showNotification(`No se puede añadir más. Stock máximo: ${latestProductInfo.cantidad}`, 'error');
                 }
             } else {
-                // Usa precio de descuento si existe y es mayor a 0, sino usa precio de venta
                 const defaultPrice = (latestProductInfo.precioDescuento && parseFloat(latestProductInfo.precioDescuento) > 0)
                                ? parseFloat(latestProductInfo.precioDescuento)
                                : parseFloat(latestProductInfo.precioVenta);
-                // Añade toda la info del producto más la cantidad y el precio personalizado
                 cart.push({ ...latestProductInfo, quantity: 1, customPrice: defaultPrice });
             }
             
-            document.getElementById('search-product').value = ''; // Limpia la búsqueda
-            document.getElementById('search-results').classList.add('hidden'); // Oculta resultados
-            renderCart(); // Actualiza la tabla del carrito
+            document.getElementById('search-product').value = '';
+            document.getElementById('search-results').classList.add('hidden');
+            renderCart();
         }
 
         function renderCart() {
             const cartItemsContainer = document.getElementById('cart-items');
-            cartItemsContainer.innerHTML = ''; // Limpia el contenido anterior
+            cartItemsContainer.innerHTML = '';
             if (cart.length === 0) {
-                // Muestra mensaje si el carrito está vacío
                 cartItemsContainer.innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
             } else {
-                 // Itera sobre los items del carrito y crea una fila por cada uno
                 cart.forEach((item, index) => {
                     const subtotal = item.quantity * item.customPrice;
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="px-2 py-3 text-center align-middle">
                             <button class="info-btn text-gray-400 hover:text-blue-600" data-cart-index="${index}">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
                             </button>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-800 align-middle">${item.nombre}</td>
@@ -643,36 +743,29 @@
                     cartItemsContainer.appendChild(row);
                 });
             }
-            updateTotal(); // Recalcula y muestra el total
+            updateTotal();
         }
         
-        // Actualiza el precio personalizado de un item en el carrito
         function updateItemPrice(index, newPrice) {
             const price = parseFloat(newPrice);
-             // Valida que el precio sea un número no negativo
             if (!isNaN(price) && price >= 0) cart[index].customPrice = price;
-            renderCart(); // Re-renderiza el carrito
+            renderCart();
         }
 
-        // Establece la cantidad de un item en el carrito, validando contra el stock
         function setQuantity(index, newQuantity) {
             const cartItem = cart[index];
-             // Encuentra la información de stock más reciente
             const productInStock = products.find(p => p.sku === cartItem.sku && p.nombre === cartItem.nombre);
             const maxStock = productInStock ? productInStock.cantidad : 0;
             
             let quantity = parseInt(newQuantity);
 
-             // Valida la cantidad mínima (1)
             if (isNaN(quantity) || quantity < 1) {
                 quantity = 1;
             }
 
-            // Valida contra el stock máximo
             if (quantity > maxStock) {
                 showNotification(`Stock insuficiente. Máximo disponible: ${maxStock}`, 'error');
                 cart[index].quantity = maxStock;
-                // Si el stock es 0, elimina el item del carrito
                 if (maxStock === 0) {
                      cart.splice(index, 1);
                 }
@@ -680,69 +773,100 @@
                 cart[index].quantity = quantity;
             }
 
-            renderCart(); // Re-renderiza el carrito
+            renderCart();
         }
 
-        // Elimina un item del carrito por su índice
         function removeFromCart(index) {
             cart.splice(index, 1);
-            renderCart(); // Re-renderiza el carrito
+            renderCart();
         }
 
-        // Calcula y muestra el total del carrito, habilita/deshabilita botones
         function updateTotal() {
             const total = cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0);
             document.getElementById('total-amount').textContent = `Bs ${total.toFixed(2)}`;
             const isEmpty = cart.length === 0;
-            // Deshabilita botones si el carrito está vacío
-            document.getElementById('finalize-sale-button').disabled = isEmpty;
+            document.getElementById('complete-sale-button').disabled = isEmpty;
             document.getElementById('generate-quote-button').disabled = isEmpty;
         }
 
-        // Lógica para generar la nota de venta (sin guardar en backend por ahora)
-        function completeSale() {
+        async function completeSale() {
             if (cart.length === 0) return;
+            const button = document.getElementById('complete-sale-button');
+            const buttonText = document.getElementById('sale-button-text');
+            const loader = document.getElementById('sale-loader');
+            buttonText.classList.add('hidden');
+            loader.classList.remove('hidden');
+            button.disabled = true;
 
-            const saleId = document.getElementById('current-sale-id').textContent; // Usa el ID temporal
+            const saleId = document.getElementById('current-sale-id').textContent;
             
-            // Prepara los datos para el PDF
             const saleData = {
+                saleId: saleId,
                 customer: { name: document.getElementById('customer-name').value, contact: document.getElementById('customer-contact').value, id: document.getElementById('customer-id').value },
                 items: cart.map(item => ({ 
                     Nombre: item.nombre, 
                     SKU: item.sku, 
                     cantidad: item.quantity, 
-                    precio: item.customPrice // Usa el precio personalizado
+                    precio: item.customPrice,
+                    'Precio (Compra)': item.precioCompra // Para reportes de ganancias
                 })),
-                total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0)
+                total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0),
+                user: {
+                    id: currentUser.id,
+                    fullName: currentUser.full_name
+                }
             };
             
-            showNotification('Generando nota de venta...', 'success');
-            // Genera el PDF
-            const { pdfBlob, fileName } = generateSalePDF(saleId, saleData);
-            // Muestra opciones para descargar o compartir
-            showShareOptions(pdfBlob, fileName, 'Nota Generada', 'El PDF de la nota de venta ha sido generado. ¿Qué deseas hacer?');
-            
-            // Limpia el carrito y el formulario
-            cart = [];
-            renderCart();
-            document.getElementById('customer-form').reset();
-            updateDateTime(); // Prepara el ID temporal para la siguiente "venta"
+            try {
+                // 1. Guardar la venta en la base de datos y actualizar stock
+                const response = await robustFetch(`${API_BASE_URL}/sales`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(saleData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // 2. Generar PDF
+                    const { pdfBlob, fileName } = generateSalePDF(result.data.saleId, saleData);
+                    
+                    // 3. Mostrar opciones para compartir/descargar
+                    showShareOptions(pdfBlob, fileName, 'Venta Completada', 'Venta guardada y PDF generado. ¿Qué deseas hacer?');
+                    
+                    // 4. Actualizar datos locales
+                    await Promise.all([fetchProducts(), fetchSales()]);
+
+                    // 5. Limpiar UI
+                    cart = [];
+                    renderCart();
+                    document.getElementById('customer-form').reset();
+                    renderSalesResults();
+                    displayNextSaleId();
+
+                } else {
+                    throw new Error(result.message || 'Error desconocido del servidor.');
+                }
+            } catch (error) {
+                console.error('Error al registrar la venta:', error);
+                showNotification(`Error al registrar la venta: ${error.message}`, 'error');
+            } finally {
+                buttonText.classList.remove('hidden');
+                loader.classList.add('hidden');
+                button.disabled = cart.length === 0;
+            }
         }
 
-        // Wrapper para generar PDF de nota de venta
         function generateSalePDF(saleId, saleData) {
             return generateDocumentPDF('Nota de Venta', `Nr: ${saleId}`, saleData);
         }
 
-        // Lógica para generar cotización
         function handleGenerateQuote() {
             if (cart.length === 0) {
                 showNotification("El carrito está vacío. Añade productos para cotizar.", 'error');
                 return;
             }
 
-            // Prepara los datos para el PDF
             const quoteData = {
                 customer: { 
                     name: document.getElementById('customer-name').value, 
@@ -753,23 +877,19 @@
                     Nombre: item.nombre, 
                     SKU: item.sku, 
                     cantidad: item.quantity, 
-                    precio: item.customPrice // Usa el precio personalizado
+                    precio: item.customPrice 
                 })),
                 total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0)
             };
             
-            // Genera el PDF de cotización
             const { pdfBlob, fileName } = generateQuotePDF(quoteData);
-            // Muestra opciones para descargar o compartir
             showShareOptions(pdfBlob, fileName, 'Cotización Generada', 'El PDF de la cotización ha sido generado. ¿Qué deseas hacer?');
         }
 
-        // Wrapper para generar PDF de cotización
         function generateQuotePDF(quoteData) {
             return generateDocumentPDF('Cotización', 'Válido por 24hrs.', quoteData, 'Cotizacion');
         }
 
-        // Función central para generar PDFs (Nota o Cotización)
         function generateDocumentPDF(docType, docIdentifier, data, filePrefix = 'Nota_Venta') {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -780,22 +900,19 @@
             const headerH = 30;
             const r = 3; 
             
-            // Encabezado con fondo oscuro
             doc.setFillColor('#303c54');
             doc.roundedRect(margin, margin, headerW, headerH, r, r, 'F');
             doc.setTextColor('#FFFFFF');
 
-            // Logo (si está precargado)
             let textStartX = margin + 5;
             if (preloadedLogo) {
-                const logoH = 7.2; // Tamaño reducido
+                const logoH = 7.2; // Reducido
                 const logoW = (preloadedLogo.width / preloadedLogo.height) * logoH;
                 const logoY = margin + (headerH - logoH) / 2;
                 doc.addImage(preloadedLogo.dataURL, 'PNG', margin + 5, logoY, logoW, logoH, undefined, 'FAST');
-                textStartX = margin + logoW + 8; // Ajusta inicio del texto
+                textStartX = margin + logoW + 8;
             }
             
-            // Textos del encabezado
             doc.setFontSize(17.6);
             doc.text("ArelyShop", textStartX, margin + 15);
             doc.setFontSize(8.8);
@@ -807,20 +924,19 @@
             doc.text(docIdentifier, pageW - margin - 5, margin + 18, { align: 'right' });
             doc.text(`Fecha: ${new Date().toLocaleDateString('es-BO')}`, pageW - margin - 5, margin + 24, { align: 'right' });
 
-            // Datos del cliente
             const startY = margin + headerH + 10;
             doc.setTextColor('#000000');
             doc.setFontSize(12);
             doc.text("Datos del Cliente:", margin, startY);
             doc.setFontSize(10);
+            
             const customerInfo = `Nombre: ${data.customer.name || 'N/A'}   |   Contacto: ${data.customer.contact || 'N/A'}   |   NIT/CI: ${data.customer.id || 'N/A'}`;
             doc.text(customerInfo, margin, startY + 8);
             
-            // Tabla de productos
             const tableColumn = ["Cant.", "Descripción", "P. Unit.", "Subtotal"];
             const tableRows = [];
             data.items.forEach(item => {
-                const description = `${item.Nombre}\n(SKU: ${item.SKU || 'N/A'})`; // Incluye SKU en descripción
+                const description = `${item.Nombre}\n(SKU: ${item.SKU || 'N/A'})`;
                 const itemData = [ item.cantidad, description, `Bs ${item.precio.toFixed(2)}`, `Bs ${(item.cantidad * item.precio).toFixed(2)}` ];
                 tableRows.push(itemData);
             });
@@ -833,14 +949,12 @@
                 headStyles: { fillColor: '#cdcdcd', textColor: '#000000' },
                 styles: { cellPadding: 2, fontSize: 9 },
                 didParseCell: function (data) {
-                    // Reduce tamaño de fuente para descripción larga
                     if (data.column.dataKey === 1) {
                         data.cell.styles.fontSize = 8;
                     }
                 }
             });
             
-            // Total y pie de página
             const finalY = doc.autoTable.previous.finalY;
             doc.setFontSize(14);
             doc.text("TOTAL:", margin, finalY + 15);
@@ -851,7 +965,6 @@
             doc.text(thankYouMessage, pageW / 2, finalY + 30, { align: 'center' });
             doc.text("Visita nuestra tienda online: www.arelyshop.com", pageW / 2, finalY + 35, { align: 'center' });
             
-            // Código QR en el pie de página (si está precargado)
             if (preloadedPdfQr) {
                 const qrSize = 25;
                 const qrX = (pageW - qrSize) / 2;
@@ -859,7 +972,6 @@
                 doc.addImage(preloadedPdfQr.dataURL, 'JPEG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
             }
 
-            // Genera nombre de archivo
             const customerName = (data.customer.name || '').trim().replace(/ /g, "_") || "sin-cliente";
             let fileName;
             if (filePrefix === 'Nota_Venta') {
@@ -869,14 +981,99 @@
                 fileName = `${filePrefix}_${customerName}.pdf`;
             }
             
-            // Genera el Blob del PDF
             const pdfBlob = doc.output('blob');
             return { pdfBlob, fileName };
         }
         
-        // Muestra el modal con detalles del producto
+        function renderSalesResults() {
+            const searchTerm = document.getElementById('search-sales-input').value.toLowerCase();
+            const container = document.getElementById('sales-results-container');
+            container.innerHTML = '';
+            
+            const filteredSales = sales.filter(s => 
+                s.saleId?.toLowerCase().includes(searchTerm) ||
+                s.nombreCliente?.toLowerCase().includes(searchTerm) ||
+                s.contacto?.toString().toLowerCase().includes(searchTerm) ||
+                s.userName?.toLowerCase().includes(searchTerm) // Buscar por vendedor
+            );
+
+            if (filteredSales.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">No se encontraron ventas.</p>';
+                return;
+            }
+
+            filteredSales.forEach(sale => {
+                const isAnnulled = sale.estado === 'Anulada';
+                const statusText = isAnnulled ? 'Anulada' : 'Completada';
+                const statusColor = isAnnulled ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+                const card = document.createElement('div');
+                card.className = `p-4 border rounded-lg ${isAnnulled ? 'bg-gray-200 opacity-70' : 'bg-white'}`;
+                
+                let productsHtml = '<ul>';
+                try {
+                    const saleProducts = (typeof sale.productosVendidos === 'string') ? JSON.parse(sale.productosVendidos) : sale.productosVendidos;
+                    if (Array.isArray(saleProducts)) {
+                        saleProducts.forEach(p => {
+                            const price = p.precio !== undefined ? parseFloat(p.precio).toFixed(2) : 'N/A';
+                            productsHtml += `<li class="text-xs">${p.cantidad} x ${p.Nombre} (SKU: ${p.SKU}) @ Bs ${price}</li>`;
+                        });
+                    }
+                } catch(e) { productsHtml += '<li>Error al leer productos</li>'; }
+                productsHtml += '</ul>';
+                
+                const totalVenta = sale.totalVenta !== undefined ? parseFloat(sale.totalVenta).toFixed(2) : 'N/A';
+                
+                card.innerHTML = `
+                    <div class="flex flex-wrap justify-between items-start gap-2">
+                        <div>
+                            <p class="font-bold text-lg">Venta ${sale.saleId}</p>
+                            <p class="text-sm text-gray-600">${new Date(sale.fechaVenta).toLocaleString('es-ES')} - ${sale.nombreCliente || 'N/A'}</p>
+                            <p class="text-sm text-gray-600">Vendido por: <strong>${sale.userName || 'N/A'}</strong></p>
+                            <p class="font-semibold text-blue-600">Total: Bs ${totalVenta}</p>
+                        </div>
+                        <div class="text-right">
+                             <span class="font-semibold text-sm px-2 py-1 rounded-lg ${statusColor}">${statusText}</span>
+                             <div class="mt-2 flex space-x-2 justify-end">
+                                <button onclick="reprintSale('${sale.saleId}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">Reimprimir</button>
+                                <!-- Lógica de anulación no implementada en backend aún -->
+                                <!-- <button onclick="openAnnulConfirmModal('${sale.saleId}')" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 disabled:bg-gray-400" ${isAnnulled ? 'disabled' : ''}>Anular</button> -->
+                             </div>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-sm border-t pt-2">${productsHtml}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function reprintSale(saleId) {
+            const saleToReprint = sales.find(s => s.saleId === saleId);
+            if (!saleToReprint) {
+                showNotification("Venta no encontrada para reimprimir.", 'error');
+                return;
+            }
+
+            try {
+                const saleItems = (typeof saleToReprint.productosVendidos === 'string') ? JSON.parse(saleToReprint.productosVendidos) : saleToReprint.productosVendidos;
+                
+                const saleData = {
+                    customer: {
+                        name: saleToReprint.nombreCliente,
+                        contact: saleToReprint.contacto,
+                        id: saleToReprint.nitCi
+                    },
+                    items: Array.isArray(saleItems) ? saleItems : [],
+                    total: parseFloat(saleToReprint.totalVenta)
+                };
+                const { pdfBlob, fileName } = generateSalePDF(saleId, saleData);
+                showShareOptions(pdfBlob, fileName, 'Reimprimir Nota de Venta', 'El PDF de la nota de venta ha sido generado. ¿Qué deseas hacer?');
+            } catch (error) {
+                console.error("Error preparando data para PDF reprint:", error);
+                showNotification("No se pudo generar el PDF para esta venta.", 'error');
+            }
+        }
+
         function showProductModal(product) {
-            // Rellena la información básica
             document.getElementById('modalProductImage').src = product.urlFoto1 || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen';
             document.getElementById('modalProductName').textContent = product.nombre || 'Sin Nombre';
             document.getElementById('modalProductSku').textContent = product.sku || 'N/A';
@@ -884,7 +1081,6 @@
             document.getElementById('modalProductBranch').textContent = product.ciudadSucursal || 'N/A';
             document.getElementById('modalProductStock').textContent = product.cantidad || '0';
             
-            // Formatea y muestra los precios
             const salePrice = parseFloat(product.precioVenta || 0).toFixed(2);
             const discountPrice = parseFloat(product.precioDescuento || 0);
             const purchasePrice = parseFloat(product.precioCompra || 0).toFixed(2);
@@ -894,30 +1090,27 @@
             document.getElementById('modalProductPurchasePrice').textContent = `Bs. ${purchasePrice}`;
             document.getElementById('modalProductWholesalePrice').textContent = `Bs. ${wholesalePrice}`;
             
-            // Muestra u oculta el precio de descuento y tacha el precio regular si aplica
             const discountContainer = document.getElementById('discountPriceContainer');
             if (discountPrice > 0) {
                 document.getElementById('modalProductDiscountPrice').textContent = `Bs. ${discountPrice.toFixed(2)}`;
                 discountContainer.classList.remove('hidden');
-                document.getElementById('modalProductPrice').classList.add('line-through'); // Tachar precio regular
+                document.getElementById('modalProductPrice').classList.add('line-through');
             } else {
-                discountContainer.classList.add('hidden'); // Ocultar si no hay descuento
-                document.getElementById('modalProductPrice').classList.remove('line-through'); // Quitar tachado
+                discountContainer.classList.add('hidden');
+                document.getElementById('modalProductPrice').classList.remove('line-through');
             }
 
-            document.getElementById('productDetailModal').classList.remove('hidden'); // Muestra el modal
+            document.getElementById('productDetailModal').classList.remove('hidden');
         }
 
-        // Copia texto al portapapeles
         function copyToClipboard(text, buttonElement) {
-            if (!text || text === 'N/A') return; // No copiar si no hay texto
+            if (!text || text === 'N/A') return;
             const textarea = document.createElement('textarea');
             textarea.value = text;
             document.body.appendChild(textarea);
             textarea.select();
             try {
                 document.execCommand('copy');
-                // Feedback visual de copia exitosa
                 const originalIcon = buttonElement.innerHTML;
                 buttonElement.innerHTML = '¡Copiado!';
                 setTimeout(() => {
@@ -929,7 +1122,6 @@
             document.body.removeChild(textarea);
         }
 
-        // Muestra el modal del QR de pago ampliado
         function showQrModal() {
             const qrSrc = document.getElementById('pos-qr-code').src;
             if (qrSrc) {
@@ -938,9 +1130,8 @@
             }
         }
         
-        // Muestra el modal con opciones para descargar o compartir el PDF generado
         function showShareOptions(pdfBlob, fileName, title, text) {
-            currentPdfBlob = pdfBlob; // Guarda el blob para usarlo en los botones
+            currentPdfBlob = pdfBlob;
             currentPdfFileName = fileName;
 
             const modal = document.getElementById('share-modal');
@@ -950,11 +1141,9 @@
             const downloadBtn = document.getElementById('download-pdf-btn');
             const closeModalBtn = document.getElementById('close-share-modal');
 
-            // Actualiza textos del modal
             modalTitle.textContent = title;
             modalText.textContent = text;
 
-            // Habilita el botón de compartir solo si el navegador lo soporta
             const dataToShare = { files: [new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' })] };
             if (navigator.share && navigator.canShare && navigator.canShare(dataToShare)) {
                 shareBtn.classList.remove('hidden');
@@ -962,24 +1151,21 @@
                 shareBtn.classList.add('hidden');
             }
 
-            modal.classList.remove('hidden'); // Muestra el modal
+            modal.classList.remove('hidden');
 
-            // Lógica para el botón de Descargar
             downloadBtn.onclick = () => {
                  const link = document.createElement('a');
-                 link.href = URL.createObjectURL(currentPdfBlob); // Crea URL temporal
-                 link.download = currentPdfFileName; // Establece nombre de archivo
+                 link.href = URL.createObjectURL(currentPdfBlob);
+                 link.download = currentPdfFileName;
                  document.body.appendChild(link);
-                 link.click(); // Simula clic para descargar
-                 document.body.removeChild(link); // Limpia
-                 modal.classList.add('hidden'); // Oculta modal
+                 link.click();
+                 document.body.removeChild(link);
+                 modal.classList.add('hidden');
             };
 
-            // Lógica para el botón de Compartir
             shareBtn.onclick = async () => {
                 try {
                     const file = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
-                    // Usa la API de Share del navegador
                     await navigator.share({
                         files: [file],
                         title: `Documento: ${currentPdfFileName}`,
@@ -987,58 +1173,49 @@
                     });
                 } catch (error) {
                     console.error('Error al compartir:', error);
-                    // No mostrar error si el usuario simplemente canceló
                     if (error.name !== 'AbortError') {
                         showNotification('No se pudo compartir el archivo.', 'error');
                     }
                 } finally {
-                    modal.classList.add('hidden'); // Oculta modal
+                    modal.classList.add('hidden');
                 }
             };
 
-            // Lógica para el botón de Cerrar
             closeModalBtn.onclick = () => {
                 modal.classList.add('hidden');
             };
         }
 
-        // Inicia el escáner de código de barras
         function startScanner(targetInputId) {
-            document.getElementById('scanner-modal').classList.remove('hidden'); // Muestra el modal del escáner
+            document.getElementById('scanner-modal').classList.remove('hidden');
             
-            // Callback que se ejecuta cuando se escanea un código
             const onScanSuccess = (decodedText, decodedResult) => {
                 const targetInput = document.getElementById(targetInputId);
-                targetInput.value = decodedText; // Pone el código en el input
-                stopScanner(); // Detiene el escáner
+                targetInput.value = decodedText;
+                stopScanner();
 
-                // Si es el input de búsqueda del POS, simula Enter para buscar
                 if (targetInputId === 'search-product') {
                     const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
                     targetInput.dispatchEvent(enterEvent);
                 }
             };
 
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } }; // Configuración del escáner
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
-            // Inicia la cámara
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (error) => {/* Ignora errores continuos */})
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (error) => {})
                 .catch(err => {
                     console.error("No se pudo iniciar el escáner.", err);
                     showNotification("No se pudo iniciar la cámara. Asegúrate de dar los permisos necesarios.", 'error');
-                    stopScanner(); // Detiene si hay error al iniciar
+                    stopScanner();
                 });
         }
 
-        // Detiene el escáner de código de barras
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
-                 // Intenta detenerlo y oculta el modal
                 html5QrCode.stop().catch(err => {}).finally(() => {
                     document.getElementById('scanner-modal').classList.add('hidden');
                 });
             } else {
-                 // Si no estaba escaneando, solo oculta el modal
                  document.getElementById('scanner-modal').classList.add('hidden');
             }
         }
