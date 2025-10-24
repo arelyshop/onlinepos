@@ -35,18 +35,64 @@
 </head>
 <body class="bg-gray-100">
 
+    <!-- Login Screen -->
+    <div id="login-container" class="hidden min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+        <div class="max-w-md w-full space-y-8 p-10 rounded-xl shadow-lg border border-gray-700" style="background-color: #202c34;">
+            <div>
+                <img class="mx-auto h-12 w-auto" src="/images/logo-escritorio.svg" alt="ArelyShop">
+                <div class="flex justify-center mt-4">
+                     <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#e3e3e3"><path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z"/></svg>
+                </div>
+                <h2 class="mt-4 text-center text-3xl font-extrabold text-gray-100">
+                    Iniciar sesión POS
+                </h2>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6">
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <div>
+                        <label for="username" class="sr-only">Usuario</label>
+                        <input id="username" name="username" type="text" autocomplete="username" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Usuario">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">Contraseña</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Contraseña">
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" id="login-button" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                        <span id="login-button-text">Ingresar</span>
+                        <div id="login-loader" class="loader hidden ml-3"></div>
+                    </button>
+                </div>
+                <p id="error-message" class="mt-2 text-center text-sm text-red-500"></p>
+            </form>
+        </div>
+    </div>
+
+
     <!-- Notification Banner -->
     <div id="notification-banner" class="fixed top-0 left-0 right-0 p-4 text-white text-center z-50">
         <span id="notification-message"></span>
     </div>
 
-    <!-- App Container -->
-    <div id="app-container" class="flex flex-col min-h-screen">
+    <!-- App Container (Initially hidden until login) -->
+    <div id="app-container" class="hidden flex-col min-h-screen">
         <header class="bg-gray-800 text-white shadow-md">
             <div class="container mx-auto p-4 flex justify-between items-center">
                 <div class="flex items-center space-x-4">
                     <img src="/images/logo-escritorio.svg" alt="Logo ArelyShop" class="h-10">
-                    <h1 class="text-xl font-bold">Punto de Venta</h1>
+                    <h1 class="text-xl font-bold hidden sm:block">Punto de Venta</h1>
+                </div>
+                 <div class="flex items-center space-x-4">
+                    <div id="user-info" class="text-right">
+                         <p class="font-semibold text-sm" id="user-fullname"></p> <!-- Para mostrar nombre completo -->
+                         <p class="text-xs text-gray-400" id="user-role"></p> <!-- Para mostrar rol (opcional) -->
+                    </div>
+                    <button id="logout-button" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#FFFFFF" class="mr-1"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
+                        Salir
+                    </button>
                 </div>
             </div>
         </header>
@@ -223,16 +269,99 @@
         let html5QrCode = null; 
         let currentPdfBlob = null;
         let currentPdfFileName = '';
+        let currentUser = null; // Para guardar la información del usuario logueado
 
-        // --- INITIALIZATION ---
+        // --- AUTHENTICATION & INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('current-year').textContent = new Date().getFullYear();
             html5QrCode = new Html5Qrcode("reader");
-            initializeApp();
+            checkAuth(); // Verifica si ya hay una sesión activa
+            setupLoginListener();
+            document.getElementById('logout-button').addEventListener('click', logout);
         });
 
+        function setupLoginListener() {
+            const loginForm = document.getElementById('login-form');
+            const errorMessage = document.getElementById('error-message');
+            const loginButton = document.getElementById('login-button');
+            const buttonText = document.getElementById('login-button-text');
+            const loader = document.getElementById('login-loader');
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorMessage.textContent = '';
+                buttonText.classList.add('hidden');
+                loader.classList.remove('hidden');
+                loginButton.disabled = true;
+
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password }),
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.status === 'success') {
+                        // Guarda la información del usuario en sessionStorage
+                        sessionStorage.setItem('arelyShopUser', JSON.stringify(result.user));
+                        checkAuth(); // Llama a checkAuth para mostrar la app
+                    } else {
+                        errorMessage.textContent = result.message || 'Credenciales incorrectas.';
+                    }
+                } catch (error) {
+                    console.error('Error de red al intentar iniciar sesión:', error);
+                    errorMessage.textContent = 'No se pudo conectar al servidor. Revisa tu conexión.';
+                } finally {
+                    buttonText.classList.remove('hidden');
+                    loader.classList.add('hidden');
+                    loginButton.disabled = false;
+                }
+            });
+        }
+
+        function checkAuth() {
+            const userData = sessionStorage.getItem('arelyShopUser');
+            const loginContainer = document.getElementById('login-container');
+            const appContainer = document.getElementById('app-container');
+
+            if (userData) {
+                currentUser = JSON.parse(userData);
+                loginContainer.classList.add('hidden');
+                loginContainer.classList.remove('flex'); // Asegura quitar flex
+                appContainer.classList.remove('hidden');
+                appContainer.classList.add('flex'); // Mostrar la app
+
+                // Muestra el nombre y rol del usuario
+                document.getElementById('user-fullname').textContent = currentUser.full_name || currentUser.username;
+                document.getElementById('user-role').textContent = currentUser.role || 'Usuario';
+
+                initializeApp(); // Inicia la carga de datos de la app
+            } else {
+                currentUser = null;
+                loginContainer.classList.remove('hidden');
+                loginContainer.classList.add('flex'); // Mostrar login
+                appContainer.classList.add('hidden');
+                appContainer.classList.remove('flex'); // Ocultar la app
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('arelyShopUser');
+            // Limpia variables de estado si es necesario
+            products = [];
+            cart = [];
+            currentUser = null;
+            checkAuth(); // Vuelve a mostrar la pantalla de login
+        }
+
+
         async function initializeApp() {
-            document.getElementById('app-container').classList.remove('hidden');
+            // Ya no es necesario mostrar el contenedor aquí, checkAuth lo hace
             setupEventListeners();
             updateDateTime();
             setInterval(updateDateTime, 60000); 
@@ -258,10 +387,16 @@
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) {
+                        if (response.status === 401) { // Unauthorized
+                           console.warn("Sesión expirada o inválida. Redirigiendo al login.");
+                           logout(); // Cierra sesión si la API devuelve no autorizado
+                           throw new Error('Unauthorized');
+                        }
                         throw new Error(`Error HTTP: ${response.status}`);
                     }
                     return response;
                 } catch (error) {
+                     if (error.message === 'Unauthorized') throw error; // No reintentar si es 401
                     console.warn(`Intento ${attempt + 1} fallido: ${error.message}`);
                     if (attempt + 1 >= maxRetries) {
                         console.error("Todos los intentos de fetch fallaron.");
@@ -273,15 +408,20 @@
             }
         }
 
-        function showNotification(message, type) {
+        function showNotification(message, type = 'success') { // Cambiado a success por defecto
             const banner = document.getElementById('notification-banner');
             const messageSpan = document.getElementById('notification-message');
             messageSpan.textContent = message;
-            banner.className = 'fixed top-0 left-0 right-0 p-4 text-white text-center z-50';
-            banner.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600');
-            banner.style.transform = 'translateY(0)';
+            // Usa clases específicas para éxito y error
+            banner.className = 'fixed top-0 left-0 right-0 p-4 text-white text-center z-50 transition-transform duration-500 ease-in-out transform -translate-y-full';
+            if (type === 'success') {
+                banner.classList.add('bg-green-600');
+            } else { // Asume 'error' para cualquier otra cosa
+                banner.classList.add('bg-red-600');
+            }
+            banner.style.transform = 'translateY(0)'; // Muestra el banner
             setTimeout(() => {
-                banner.style.transform = 'translateY(-100%)';
+                banner.style.transform = 'translateY(-100%)'; // Oculta el banner
             }, 4000);
         }
 
@@ -316,6 +456,8 @@
         });
         
         function setupEventListeners() {
+             // Listener de Login y Logout ya están en DOMContentLoaded
+
             const searchInput = document.getElementById('search-product');
             searchInput.addEventListener('input', handleSearch);
             searchInput.addEventListener('keydown', handleBarcodeScan);
@@ -354,6 +496,7 @@
             document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
         }
         
+        // Mapeo entre nombres de columna DB y nombres de propiedad JS
         const mapProductToFrontend = (p) => ({
             nombre: p.name,
             sku: p.sku,
@@ -365,21 +508,32 @@
             codigoBarras: p.barcode,
             ciudadSucursal: p.ciudad_sucursal,
             urlFoto1: p.photo_url_1
+            // Añade más URLs de fotos si es necesario
         });
         
         async function fetchProducts() {
+            // Solo intentar cargar productos si el usuario está logueado
+            if (!currentUser) {
+                 console.log("Usuario no logueado, saltando carga de productos.");
+                 return;
+            }
             try {
-                const response = await robustFetch(`${API_BASE_URL}/products`);
+                // Incluye el token de sesión si tu API lo requiere (ej. usando Bearer token)
+                // const headers = { 'Authorization': `Bearer ${currentUser.token}` }; // Ejemplo
+                const response = await robustFetch(`${API_BASE_URL}/products`); // , { headers }); // Ejemplo con header
                 const result = await response.json();
                 if (result.status === 'success') {
                     products = result.data.map(mapProductToFrontend);
+                    console.log("Productos cargados:", products.length);
                 } else {
                     products = [];
                     showNotification(result.message || "Error al cargar productos.", 'error');
                 }
             } catch (error) {
                 console.error("Fallo al cargar productos:", error);
-                showNotification("No se pudieron cargar los productos. Revisa tu conexión.", 'error');
+                 if (error.message !== 'Unauthorized') { // No mostrar notificación si ya se hizo logout
+                    showNotification("No se pudieron cargar los productos. Revisa tu conexión.", 'error');
+                 }
             }
         }
 
@@ -416,7 +570,11 @@
                 filteredProducts.forEach(p => {
                     const div = document.createElement('div');
                     div.className = 'p-3 hover:bg-gray-100 cursor-pointer';
-                    div.textContent = `${p.nombre} (Bs ${p.precioVenta}) - Stock: ${p.cantidad}`;
+                    // Muestra precio de venta o descuento si existe
+                     const displayPrice = (p.precioDescuento && parseFloat(p.precioDescuento) > 0)
+                                      ? p.precioDescuento
+                                      : p.precioVenta;
+                    div.textContent = `${p.nombre} (Bs ${parseFloat(displayPrice).toFixed(2)}) - Stock: ${p.cantidad}`;
                     div.onclick = () => addToCart(p);
                     resultsContainer.appendChild(div);
                 });
@@ -426,6 +584,7 @@
         }
 
         function addToCart(product) {
+            // Vuelve a buscar la info más reciente del producto desde 'products'
             const latestProductInfo = products.find(p => p.sku === product.sku && p.nombre === product.nombre);
             
             if (!latestProductInfo || latestProductInfo.cantidad <= 0) {
@@ -438,36 +597,41 @@
             const existingCartItem = cart.find(item => item.sku === product.sku && item.nombre === product.nombre);
 
             if (existingCartItem) {
+                 // Asegúrate de que no exceda el stock actual
                 if (existingCartItem.quantity < latestProductInfo.cantidad) {
                     existingCartItem.quantity++;
                 } else {
                     showNotification(`No se puede añadir más. Stock máximo: ${latestProductInfo.cantidad}`, 'error');
                 }
             } else {
+                // Usa precio de descuento si existe y es mayor a 0, sino usa precio de venta
                 const defaultPrice = (latestProductInfo.precioDescuento && parseFloat(latestProductInfo.precioDescuento) > 0)
                                ? parseFloat(latestProductInfo.precioDescuento)
                                : parseFloat(latestProductInfo.precioVenta);
+                // Añade toda la info del producto más la cantidad y el precio personalizado
                 cart.push({ ...latestProductInfo, quantity: 1, customPrice: defaultPrice });
             }
             
-            document.getElementById('search-product').value = '';
-            document.getElementById('search-results').classList.add('hidden');
-            renderCart();
+            document.getElementById('search-product').value = ''; // Limpia la búsqueda
+            document.getElementById('search-results').classList.add('hidden'); // Oculta resultados
+            renderCart(); // Actualiza la tabla del carrito
         }
 
         function renderCart() {
             const cartItemsContainer = document.getElementById('cart-items');
-            cartItemsContainer.innerHTML = '';
+            cartItemsContainer.innerHTML = ''; // Limpia el contenido anterior
             if (cart.length === 0) {
+                // Muestra mensaje si el carrito está vacío
                 cartItemsContainer.innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
             } else {
+                 // Itera sobre los items del carrito y crea una fila por cada uno
                 cart.forEach((item, index) => {
                     const subtotal = item.quantity * item.customPrice;
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td class="px-2 py-3 text-center align-middle">
                             <button class="info-btn text-gray-400 hover:text-blue-600" data-cart-index="${index}">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
                             </button>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-800 align-middle">${item.nombre}</td>
@@ -479,87 +643,106 @@
                     cartItemsContainer.appendChild(row);
                 });
             }
-            updateTotal();
+            updateTotal(); // Recalcula y muestra el total
         }
         
+        // Actualiza el precio personalizado de un item en el carrito
         function updateItemPrice(index, newPrice) {
             const price = parseFloat(newPrice);
+             // Valida que el precio sea un número no negativo
             if (!isNaN(price) && price >= 0) cart[index].customPrice = price;
-            renderCart();
+            renderCart(); // Re-renderiza el carrito
         }
 
+        // Establece la cantidad de un item en el carrito, validando contra el stock
         function setQuantity(index, newQuantity) {
             const cartItem = cart[index];
+             // Encuentra la información de stock más reciente
             const productInStock = products.find(p => p.sku === cartItem.sku && p.nombre === cartItem.nombre);
             const maxStock = productInStock ? productInStock.cantidad : 0;
             
             let quantity = parseInt(newQuantity);
 
+             // Valida la cantidad mínima (1)
             if (isNaN(quantity) || quantity < 1) {
                 quantity = 1;
             }
 
+            // Valida contra el stock máximo
             if (quantity > maxStock) {
                 showNotification(`Stock insuficiente. Máximo disponible: ${maxStock}`, 'error');
                 cart[index].quantity = maxStock;
+                // Si el stock es 0, elimina el item del carrito
                 if (maxStock === 0) {
                      cart.splice(index, 1);
                 }
             } else {
                 cart[index].quantity = quantity;
             }
-            renderCart();
+
+            renderCart(); // Re-renderiza el carrito
         }
 
+        // Elimina un item del carrito por su índice
         function removeFromCart(index) {
             cart.splice(index, 1);
-            renderCart();
+            renderCart(); // Re-renderiza el carrito
         }
 
+        // Calcula y muestra el total del carrito, habilita/deshabilita botones
         function updateTotal() {
             const total = cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0);
             document.getElementById('total-amount').textContent = `Bs ${total.toFixed(2)}`;
             const isEmpty = cart.length === 0;
+            // Deshabilita botones si el carrito está vacío
             document.getElementById('finalize-sale-button').disabled = isEmpty;
             document.getElementById('generate-quote-button').disabled = isEmpty;
         }
 
+        // Lógica para generar la nota de venta (sin guardar en backend por ahora)
         function completeSale() {
             if (cart.length === 0) return;
 
-            const saleId = document.getElementById('current-sale-id').textContent;
+            const saleId = document.getElementById('current-sale-id').textContent; // Usa el ID temporal
             
+            // Prepara los datos para el PDF
             const saleData = {
                 customer: { name: document.getElementById('customer-name').value, contact: document.getElementById('customer-contact').value, id: document.getElementById('customer-id').value },
                 items: cart.map(item => ({ 
                     Nombre: item.nombre, 
                     SKU: item.sku, 
                     cantidad: item.quantity, 
-                    precio: item.customPrice
+                    precio: item.customPrice // Usa el precio personalizado
                 })),
                 total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0)
             };
             
             showNotification('Generando nota de venta...', 'success');
+            // Genera el PDF
             const { pdfBlob, fileName } = generateSalePDF(saleId, saleData);
+            // Muestra opciones para descargar o compartir
             showShareOptions(pdfBlob, fileName, 'Nota Generada', 'El PDF de la nota de venta ha sido generado. ¿Qué deseas hacer?');
             
+            // Limpia el carrito y el formulario
             cart = [];
             renderCart();
             document.getElementById('customer-form').reset();
-            updateDateTime(); // Prepara el ID para la siguiente venta
+            updateDateTime(); // Prepara el ID temporal para la siguiente "venta"
         }
 
+        // Wrapper para generar PDF de nota de venta
         function generateSalePDF(saleId, saleData) {
             return generateDocumentPDF('Nota de Venta', `Nr: ${saleId}`, saleData);
         }
 
+        // Lógica para generar cotización
         function handleGenerateQuote() {
             if (cart.length === 0) {
                 showNotification("El carrito está vacío. Añade productos para cotizar.", 'error');
                 return;
             }
 
+            // Prepara los datos para el PDF
             const quoteData = {
                 customer: { 
                     name: document.getElementById('customer-name').value, 
@@ -570,19 +753,23 @@
                     Nombre: item.nombre, 
                     SKU: item.sku, 
                     cantidad: item.quantity, 
-                    precio: item.customPrice 
+                    precio: item.customPrice // Usa el precio personalizado
                 })),
                 total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0)
             };
             
+            // Genera el PDF de cotización
             const { pdfBlob, fileName } = generateQuotePDF(quoteData);
+            // Muestra opciones para descargar o compartir
             showShareOptions(pdfBlob, fileName, 'Cotización Generada', 'El PDF de la cotización ha sido generado. ¿Qué deseas hacer?');
         }
 
+        // Wrapper para generar PDF de cotización
         function generateQuotePDF(quoteData) {
             return generateDocumentPDF('Cotización', 'Válido por 24hrs.', quoteData, 'Cotizacion');
         }
 
+        // Función central para generar PDFs (Nota o Cotización)
         function generateDocumentPDF(docType, docIdentifier, data, filePrefix = 'Nota_Venta') {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -593,19 +780,22 @@
             const headerH = 30;
             const r = 3; 
             
+            // Encabezado con fondo oscuro
             doc.setFillColor('#303c54');
             doc.roundedRect(margin, margin, headerW, headerH, r, r, 'F');
             doc.setTextColor('#FFFFFF');
 
+            // Logo (si está precargado)
             let textStartX = margin + 5;
             if (preloadedLogo) {
-                const logoH = 7.2; // Reducido en un 40% (antes era 12)
+                const logoH = 7.2; // Tamaño reducido
                 const logoW = (preloadedLogo.width / preloadedLogo.height) * logoH;
                 const logoY = margin + (headerH - logoH) / 2;
                 doc.addImage(preloadedLogo.dataURL, 'PNG', margin + 5, logoY, logoW, logoH, undefined, 'FAST');
-                textStartX = margin + logoW + 8;
+                textStartX = margin + logoW + 8; // Ajusta inicio del texto
             }
             
+            // Textos del encabezado
             doc.setFontSize(17.6);
             doc.text("ArelyShop", textStartX, margin + 15);
             doc.setFontSize(8.8);
@@ -617,19 +807,20 @@
             doc.text(docIdentifier, pageW - margin - 5, margin + 18, { align: 'right' });
             doc.text(`Fecha: ${new Date().toLocaleDateString('es-BO')}`, pageW - margin - 5, margin + 24, { align: 'right' });
 
+            // Datos del cliente
             const startY = margin + headerH + 10;
             doc.setTextColor('#000000');
             doc.setFontSize(12);
             doc.text("Datos del Cliente:", margin, startY);
             doc.setFontSize(10);
-            
             const customerInfo = `Nombre: ${data.customer.name || 'N/A'}   |   Contacto: ${data.customer.contact || 'N/A'}   |   NIT/CI: ${data.customer.id || 'N/A'}`;
             doc.text(customerInfo, margin, startY + 8);
             
+            // Tabla de productos
             const tableColumn = ["Cant.", "Descripción", "P. Unit.", "Subtotal"];
             const tableRows = [];
             data.items.forEach(item => {
-                const description = `${item.Nombre}\n(SKU: ${item.SKU || 'N/A'})`;
+                const description = `${item.Nombre}\n(SKU: ${item.SKU || 'N/A'})`; // Incluye SKU en descripción
                 const itemData = [ item.cantidad, description, `Bs ${item.precio.toFixed(2)}`, `Bs ${(item.cantidad * item.precio).toFixed(2)}` ];
                 tableRows.push(itemData);
             });
@@ -642,12 +833,14 @@
                 headStyles: { fillColor: '#cdcdcd', textColor: '#000000' },
                 styles: { cellPadding: 2, fontSize: 9 },
                 didParseCell: function (data) {
+                    // Reduce tamaño de fuente para descripción larga
                     if (data.column.dataKey === 1) {
                         data.cell.styles.fontSize = 8;
                     }
                 }
             });
             
+            // Total y pie de página
             const finalY = doc.autoTable.previous.finalY;
             doc.setFontSize(14);
             doc.text("TOTAL:", margin, finalY + 15);
@@ -658,6 +851,7 @@
             doc.text(thankYouMessage, pageW / 2, finalY + 30, { align: 'center' });
             doc.text("Visita nuestra tienda online: www.arelyshop.com", pageW / 2, finalY + 35, { align: 'center' });
             
+            // Código QR en el pie de página (si está precargado)
             if (preloadedPdfQr) {
                 const qrSize = 25;
                 const qrX = (pageW - qrSize) / 2;
@@ -665,6 +859,7 @@
                 doc.addImage(preloadedPdfQr.dataURL, 'JPEG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
             }
 
+            // Genera nombre de archivo
             const customerName = (data.customer.name || '').trim().replace(/ /g, "_") || "sin-cliente";
             let fileName;
             if (filePrefix === 'Nota_Venta') {
@@ -674,11 +869,14 @@
                 fileName = `${filePrefix}_${customerName}.pdf`;
             }
             
+            // Genera el Blob del PDF
             const pdfBlob = doc.output('blob');
             return { pdfBlob, fileName };
         }
         
+        // Muestra el modal con detalles del producto
         function showProductModal(product) {
+            // Rellena la información básica
             document.getElementById('modalProductImage').src = product.urlFoto1 || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen';
             document.getElementById('modalProductName').textContent = product.nombre || 'Sin Nombre';
             document.getElementById('modalProductSku').textContent = product.sku || 'N/A';
@@ -686,6 +884,7 @@
             document.getElementById('modalProductBranch').textContent = product.ciudadSucursal || 'N/A';
             document.getElementById('modalProductStock').textContent = product.cantidad || '0';
             
+            // Formatea y muestra los precios
             const salePrice = parseFloat(product.precioVenta || 0).toFixed(2);
             const discountPrice = parseFloat(product.precioDescuento || 0);
             const purchasePrice = parseFloat(product.precioCompra || 0).toFixed(2);
@@ -695,27 +894,30 @@
             document.getElementById('modalProductPurchasePrice').textContent = `Bs. ${purchasePrice}`;
             document.getElementById('modalProductWholesalePrice').textContent = `Bs. ${wholesalePrice}`;
             
+            // Muestra u oculta el precio de descuento y tacha el precio regular si aplica
             const discountContainer = document.getElementById('discountPriceContainer');
             if (discountPrice > 0) {
                 document.getElementById('modalProductDiscountPrice').textContent = `Bs. ${discountPrice.toFixed(2)}`;
                 discountContainer.classList.remove('hidden');
-                document.getElementById('modalProductPrice').classList.add('line-through');
+                document.getElementById('modalProductPrice').classList.add('line-through'); // Tachar precio regular
             } else {
-                discountContainer.classList.add('hidden');
-                document.getElementById('modalProductPrice').classList.remove('line-through');
+                discountContainer.classList.add('hidden'); // Ocultar si no hay descuento
+                document.getElementById('modalProductPrice').classList.remove('line-through'); // Quitar tachado
             }
 
-            document.getElementById('productDetailModal').classList.remove('hidden');
+            document.getElementById('productDetailModal').classList.remove('hidden'); // Muestra el modal
         }
 
+        // Copia texto al portapapeles
         function copyToClipboard(text, buttonElement) {
-            if (!text || text === 'N/A') return;
+            if (!text || text === 'N/A') return; // No copiar si no hay texto
             const textarea = document.createElement('textarea');
             textarea.value = text;
             document.body.appendChild(textarea);
             textarea.select();
             try {
                 document.execCommand('copy');
+                // Feedback visual de copia exitosa
                 const originalIcon = buttonElement.innerHTML;
                 buttonElement.innerHTML = '¡Copiado!';
                 setTimeout(() => {
@@ -727,6 +929,7 @@
             document.body.removeChild(textarea);
         }
 
+        // Muestra el modal del QR de pago ampliado
         function showQrModal() {
             const qrSrc = document.getElementById('pos-qr-code').src;
             if (qrSrc) {
@@ -735,8 +938,9 @@
             }
         }
         
+        // Muestra el modal con opciones para descargar o compartir el PDF generado
         function showShareOptions(pdfBlob, fileName, title, text) {
-            currentPdfBlob = pdfBlob;
+            currentPdfBlob = pdfBlob; // Guarda el blob para usarlo en los botones
             currentPdfFileName = fileName;
 
             const modal = document.getElementById('share-modal');
@@ -746,9 +950,11 @@
             const downloadBtn = document.getElementById('download-pdf-btn');
             const closeModalBtn = document.getElementById('close-share-modal');
 
+            // Actualiza textos del modal
             modalTitle.textContent = title;
             modalText.textContent = text;
 
+            // Habilita el botón de compartir solo si el navegador lo soporta
             const dataToShare = { files: [new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' })] };
             if (navigator.share && navigator.canShare && navigator.canShare(dataToShare)) {
                 shareBtn.classList.remove('hidden');
@@ -756,21 +962,24 @@
                 shareBtn.classList.add('hidden');
             }
 
-            modal.classList.remove('hidden');
+            modal.classList.remove('hidden'); // Muestra el modal
 
+            // Lógica para el botón de Descargar
             downloadBtn.onclick = () => {
                  const link = document.createElement('a');
-                 link.href = URL.createObjectURL(currentPdfBlob);
-                 link.download = currentPdfFileName;
+                 link.href = URL.createObjectURL(currentPdfBlob); // Crea URL temporal
+                 link.download = currentPdfFileName; // Establece nombre de archivo
                  document.body.appendChild(link);
-                 link.click();
-                 document.body.removeChild(link);
-                 modal.classList.add('hidden');
+                 link.click(); // Simula clic para descargar
+                 document.body.removeChild(link); // Limpia
+                 modal.classList.add('hidden'); // Oculta modal
             };
 
+            // Lógica para el botón de Compartir
             shareBtn.onclick = async () => {
                 try {
                     const file = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
+                    // Usa la API de Share del navegador
                     await navigator.share({
                         files: [file],
                         title: `Documento: ${currentPdfFileName}`,
@@ -778,49 +987,58 @@
                     });
                 } catch (error) {
                     console.error('Error al compartir:', error);
+                    // No mostrar error si el usuario simplemente canceló
                     if (error.name !== 'AbortError') {
                         showNotification('No se pudo compartir el archivo.', 'error');
                     }
                 } finally {
-                    modal.classList.add('hidden');
+                    modal.classList.add('hidden'); // Oculta modal
                 }
             };
 
+            // Lógica para el botón de Cerrar
             closeModalBtn.onclick = () => {
                 modal.classList.add('hidden');
             };
         }
 
+        // Inicia el escáner de código de barras
         function startScanner(targetInputId) {
-            document.getElementById('scanner-modal').classList.remove('hidden');
+            document.getElementById('scanner-modal').classList.remove('hidden'); // Muestra el modal del escáner
             
+            // Callback que se ejecuta cuando se escanea un código
             const onScanSuccess = (decodedText, decodedResult) => {
                 const targetInput = document.getElementById(targetInputId);
-                targetInput.value = decodedText;
-                stopScanner();
+                targetInput.value = decodedText; // Pone el código en el input
+                stopScanner(); // Detiene el escáner
 
+                // Si es el input de búsqueda del POS, simula Enter para buscar
                 if (targetInputId === 'search-product') {
                     const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
                     targetInput.dispatchEvent(enterEvent);
                 }
             };
 
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } }; // Configuración del escáner
             
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (error) => {})
+            // Inicia la cámara
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (error) => {/* Ignora errores continuos */})
                 .catch(err => {
                     console.error("No se pudo iniciar el escáner.", err);
                     showNotification("No se pudo iniciar la cámara. Asegúrate de dar los permisos necesarios.", 'error');
-                    stopScanner();
+                    stopScanner(); // Detiene si hay error al iniciar
                 });
         }
 
+        // Detiene el escáner de código de barras
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
+                 // Intenta detenerlo y oculta el modal
                 html5QrCode.stop().catch(err => {}).finally(() => {
                     document.getElementById('scanner-modal').classList.add('hidden');
                 });
             } else {
+                 // Si no estaba escaneando, solo oculta el modal
                  document.getElementById('scanner-modal').classList.add('hidden');
             }
         }
@@ -828,8 +1046,4 @@
     </script>
 </body>
 </html>
-
-
-
-
 
