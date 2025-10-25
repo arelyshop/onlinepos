@@ -1,69 +1,51 @@
 // netlify/functions/sales.js
 const { Pool } = require('pg');
 
+// Cabeceras CORS para permitir la comunicación entre el frontend y la función
 const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': '*', // Permite solicitudes desde cualquier origen (ajusta si es necesario por seguridad)
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS', // Métodos HTTP permitidos
 };
 
 exports.handler = async (event) => {
-    console.log(`[${event.httpMethod}] Inicio de la función sales.`); // LOG INICIAL
-
+    // --- Manejo de OPTIONS (Preflight CORS) ---
     if (event.httpMethod === 'OPTIONS') {
-        console.log("Respondiendo a solicitud OPTIONS (preflight)");
         return {
-            statusCode: 204,
+            statusCode: 204, // No Content
             headers,
             body: ''
         };
     }
 
-    let pool; // Definir pool fuera del try para usarlo en finally si es necesario
+    // Configuración de la conexión a la base de datos Neon
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL, // Lee la URL desde las variables de entorno de Netlify
+        ssl: {
+            rejectUnauthorized: false // Necesario para conexiones a Neon
+        },
+        // Timeouts para evitar que la función se quede colgada
+        connectionTimeoutMillis: 5000, // 5 segundos para conectar
+        query_timeout: 8000 // 8 segundos por consulta
+    });
+
+    // Obtener un cliente del pool para manejar transacciones
+    let client; // Definir fuera para usar en finally
 
     try {
-        console.log("Intentando crear pool de conexión...");
-        pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: {
-                rejectUnauthorized: false
-            },
-            // Añadir timeouts para conexión y consulta
-            connectionTimeoutMillis: 5000, // 5 segundos para conectar
-            query_timeout: 8000 // 8 segundos por consulta (ajustar si es necesario)
-        });
-        console.log("Pool de conexión creado.");
-    } catch (poolError) {
-        console.error("!!! Error CRÍTICO al crear el pool de conexión:", poolError);
-        return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ status: 'error', message: 'Error al inicializar la conexión a la base de datos.', details: poolError.message }),
-        };
-    }
-
-
-    let client; // Definir cliente fuera del try principal
-
-    try {
-        console.log("Intentando obtener cliente del pool...");
-        client = await pool.connect();
-        console.log("Cliente obtenido del pool.");
+        client = await pool.connect(); // Intentar conectar
 
         // --- OBTENER TODAS LAS VENTAS (Método GET) ---
         if (event.httpMethod === 'GET') {
-            console.log("[GET] Intentando obtener ventas...");
             try {
                 const { rows } = await client.query('SELECT * FROM sales ORDER BY "fechaVenta" DESC');
-                console.log(`[GET] Consulta de ventas exitosa. ${rows.length} ventas encontradas.`);
                 return {
-                    statusCode: 200,
+                    statusCode: 200, // OK
                     headers,
                     body: JSON.stringify({ status: 'success', data: rows }),
                 };
             } catch (queryError) {
-                 console.error("[GET] !!! Error al ejecutar la consulta de ventas:", queryError);
-                 // Devolver error específico de la consulta
+                 console.error("[GET] Error al ejecutar la consulta de ventas:", queryError);
                  return {
                     statusCode: 500,
                     headers,
@@ -74,29 +56,28 @@ exports.handler = async (event) => {
 
         // --- REGISTRAR NUEVA VENTA (Método POST) ---
         if (event.httpMethod === 'POST') {
-             console.log("[POST] Intentando registrar nueva venta...");
-             // ... (resto del código POST sin cambios, pero podrías añadir logs similares si falla) ...
-             // Asegúrate de que los logs de error dentro del try/catch de la transacción POST sigan presentes.
             const saleData = JSON.parse(event.body);
 
+            // Validación básica
             if (!saleData || !saleData.saleId || !Array.isArray(saleData.items) || !saleData.user) {
-                 console.error("[POST] Datos de venta inválidos recibidos:", saleData);
                 return {
-                    statusCode: 400,
+                    statusCode: 400, // Bad Request
                     headers,
                     body: JSON.stringify({ status: 'error', message: 'Datos de venta incompletos o inválidos.' }),
                 };
             }
 
             try {
+                // Iniciar transacción
                 await client.query('BEGIN');
-                console.log(`[POST ${saleData.saleId}] Transacción iniciada.`);
 
+                // 1. Insertar venta
                 const saleQuery = `
                     INSERT INTO sales ("saleId", "nombreCliente", "contacto", "nitCi", "totalVenta", "productosVendidos", "userId", "userName", "estado")
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Completada')
                     RETURNING *;
                 `;
+                // Asegurar que items sea array antes de stringify
                 const itemsJsonString = Array.isArray(saleData.items) ? JSON.stringify(saleData.items) : '[]';
 
                 const saleValues = [
@@ -107,25 +88,25 @@ exports.handler = async (event) => {
                     saleData.total,
                     itemsJsonString,
                     saleData.user.id,
-                    saleData.user.fullName
+                    saleData.user.fullName // Asegúrate que el frontend envíe fullName
                 ];
-                 console.log(`[POST ${saleData.saleId}] Insertando venta...`);
                 const saleResult = await client.query(saleQuery, saleValues);
                 const newSale = saleResult.rows[0];
-                 console.log(`[POST ${saleData.saleId}] Venta insertada.`);
 
-                if (!Array.isArray(saleData.items)) {
+                // Asegurar que items sea array para el map
+                 if (!Array.isArray(saleData.items)) {
+                    // Este error debería ser capturado antes, pero por seguridad
                     throw new Error("Formato de items inválido recibido del frontend.");
                 }
 
-                 console.log(`[POST ${saleData.saleId}] Actualizando stock para ${saleData.items.length} items...`);
+                // 2. Actualizar stock
                 const updateStockPromises = saleData.items.map(item => {
                     const updateQuery = `
                         UPDATE products SET stock = stock - $1
                         WHERE id = $2 AND stock >= $1;
                     `;
                     const quantity = parseInt(item.cantidad, 10);
-                    const productId = parseInt(item.productId, 10);
+                    const productId = parseInt(item.productId, 10); // Asegúrate que el frontend envíe productId
 
                     if (isNaN(quantity) || quantity <= 0 || isNaN(productId)) {
                         throw new Error(`Datos de producto inválidos en la venta: ${item.Nombre || 'Desconocido'} (ID: ${item.productId}, Cant: ${item.cantidad})`);
@@ -134,8 +115,8 @@ exports.handler = async (event) => {
                 });
 
                 const updateResults = await Promise.all(updateStockPromises);
-                 console.log(`[POST ${saleData.saleId}] Actualizaciones de stock (promesas) completadas.`);
 
+                // Verificar fallos de stock
                 for (let i = 0; i < updateResults.length; i++) {
                     if (updateResults[i].rowCount === 0) {
                         const failedItem = saleData.items[i];
@@ -145,27 +126,26 @@ exports.handler = async (event) => {
                         throw new Error(`Stock insuficiente para el producto: "${productName}". Stock actual: ${currentStock}, se intentó vender: ${failedItem.cantidad}.`);
                     }
                 }
-                 console.log(`[POST ${saleData.saleId}] Verificación de stock suficiente pasada.`);
 
+                // Confirmar transacción
                 await client.query('COMMIT');
-                 console.log(`[POST ${saleData.saleId}] Transacción COMMIT exitosa.`);
                 return {
-                    statusCode: 201,
+                    statusCode: 201, // Created
                     headers,
                     body: JSON.stringify({ status: 'success', data: newSale }),
                 };
 
             } catch (transactionError) {
+                // Revertir transacción en caso de error
                 await client.query('ROLLBACK');
-                 // Loguear el error específico de la transacción
-                 console.error(`[POST ${saleData.saleId || 'N/A'}] !!! Error en transacción de venta, ROLLBACK ejecutado:`, transactionError);
+                console.error(`[POST ${saleData.saleId || 'N/A'}] Error en transacción de venta:`, transactionError);
                 const specificErrorMessages = ["Datos de producto inválidos", "Stock insuficiente", "Formato de items inválido"];
                 const errorMessage = specificErrorMessages.some(msg => transactionError.message.includes(msg))
                     ? transactionError.message
                     : 'Error general al procesar la venta.';
 
                 return {
-                    statusCode: 500,
+                    statusCode: 500, // Internal Server Error (o 400 Bad Request)
                     headers,
                     body: JSON.stringify({ status: 'error', message: errorMessage, details: transactionError.message }),
                 };
@@ -174,122 +154,112 @@ exports.handler = async (event) => {
 
         // --- ANULAR VENTA (Método PUT) ---
         if (event.httpMethod === 'PUT') {
-            console.log("[PUT] Intentando anular venta...");
-            // ... (resto del código PUT sin cambios, pero podrías añadir logs similares si falla) ...
-             // Asegúrate de que los logs de error dentro del try/catch de la transacción PUT sigan presentes.
-             const { saleId } = JSON.parse(event.body);
-             console.log(`[ANULACIÓN ${saleId}] Iniciando proceso.`);
+            const { saleId } = JSON.parse(event.body);
 
-             if (!saleId) {
-                  return {
-                     statusCode: 400,
-                     headers,
-                     body: JSON.stringify({ status: 'error', message: 'Se requiere el ID de la venta para anularla.' }),
-                 };
-             }
+            if (!saleId) {
+                 return {
+                    statusCode: 400, // Bad Request
+                    headers,
+                    body: JSON.stringify({ status: 'error', message: 'Se requiere el ID de la venta para anularla.' }),
+                };
+            }
 
-              try {
-                 await client.query('BEGIN');
-                 console.log(`[ANULACIÓN ${saleId}] Transacción iniciada.`);
+             try {
+                // Iniciar transacción
+                await client.query('BEGIN');
 
-                 const getSaleQuery = 'SELECT * FROM sales WHERE "saleId" = $1 FOR UPDATE';
-                 const saleResult = await client.query(getSaleQuery, [saleId]);
+                // 1. Obtener venta y bloquearla
+                const getSaleQuery = 'SELECT * FROM sales WHERE "saleId" = $1 FOR UPDATE';
+                const saleResult = await client.query(getSaleQuery, [saleId]);
 
-                 if (saleResult.rows.length === 0) {
-                     throw new Error(`Venta con ID "${saleId}" no encontrada.`);
-                 }
-                 const sale = saleResult.rows[0];
-                 console.log(`[ANULACIÓN ${saleId}] Venta encontrada. Estado actual: ${sale.estado}`);
-                 if (sale.estado === 'Anulada') {
-                     throw new Error(`La venta "${saleId}" ya ha sido anulada previamente.`);
-                 }
+                if (saleResult.rows.length === 0) {
+                    throw new Error(`Venta con ID "${saleId}" no encontrada.`);
+                }
+                const sale = saleResult.rows[0];
 
-                  const annulQuery = 'UPDATE sales SET estado = $1 WHERE "saleId" = $2';
-                  await client.query(annulQuery, ['Anulada', saleId]);
-                  console.log(`[ANULACIÓN ${saleId}] Estado de venta actualizado a 'Anulada'.`);
+                if (sale.estado === 'Anulada') {
+                    throw new Error(`La venta "${saleId}" ya ha sido anulada previamente.`);
+                }
 
-                 let productsSold;
-                 try {
-                     console.log(`[ANULACIÓN ${saleId}] Tipo de dato 'productosVendidos': ${typeof sale.productosVendidos}`);
-                     console.log(`[ANULACIÓN ${saleId}] Contenido 'productosVendidos' antes de parsear:`, sale.productosVendidos);
+                 // 2. Marcar como Anulada
+                 const annulQuery = 'UPDATE sales SET estado = $1 WHERE "saleId" = $2';
+                 await client.query(annulQuery, ['Anulada', saleId]);
 
-                     if (sale.productosVendidos == null) {
-                          console.warn(`[ANULACIÓN ${saleId}] 'productosVendidos' es null o undefined. No se restaurará stock.`);
-                          productsSold = [];
-                     } else if (typeof sale.productosVendidos === 'string') {
-                         productsSold = JSON.parse(sale.productosVendidos);
-                         console.log(`[ANULACIÓN ${saleId}] JSON 'productosVendidos' (string) parseado correctamente.`);
-                     } else if (typeof sale.productosVendidos === 'object') {
-                         productsSold = sale.productosVendidos;
-                          console.log(`[ANULACIÓN ${saleId}] 'productosVendidos' ya es un objeto (JSONB?), usando directamente.`);
-                     } else {
-                          throw new Error(`Tipo inesperado para 'productosVendidos': ${typeof sale.productosVendidos}`);
-                     }
-                 } catch (parseError) {
-                      console.error(`[ANULACIÓN ${saleId}] Error procesando 'productosVendidos':`, parseError);
-                      throw new Error(`Formato de productos inválido en la venta ${saleId}. No se pudo restaurar stock.`);
-                 }
+                // 3. Restaurar stock
+                let productsSold;
+                try {
+                    // Verificar si es null/undefined, string o ya objeto (JSONB)
+                    if (sale.productosVendidos == null) {
+                         productsSold = [];
+                    } else if (typeof sale.productosVendidos === 'string') {
+                        productsSold = JSON.parse(sale.productosVendidos);
+                    } else if (typeof sale.productosVendidos === 'object') {
+                        productsSold = sale.productosVendidos; // Usar directamente si es JSONB
+                    } else {
+                         throw new Error(`Tipo inesperado para 'productosVendidos': ${typeof sale.productosVendidos}`);
+                    }
+                } catch (parseError) {
+                     console.error(`[ANULACIÓN ${saleId}] Error procesando 'productosVendidos':`, parseError);
+                     throw new Error(`Formato de productos inválido en la venta ${saleId}. No se pudo restaurar stock.`);
+                }
 
-                 if (Array.isArray(productsSold)) {
-                     console.log(`[ANULACIÓN ${saleId}] Procesando ${productsSold.length} productos para restaurar stock.`);
-                     const restoreStockPromises = productsSold.map((item, index) => {
-                          console.log(`[ANULACIÓN ${saleId}] Procesando item ${index + 1}:`, item);
-                          if (!item || typeof item !== 'object') {
-                               console.warn(`[ANULACIÓN ${saleId}] Item ${index + 1} inválido (no es objeto). Saltando.`);
-                               return Promise.resolve();
-                          }
-                          const quantity = parseInt(item.cantidad, 10);
-                          const productId = parseInt(item.productId, 10);
-
-                          console.log(`[ANULACIÓN ${saleId}] Item ${index + 1}: Cantidad parseada=${quantity}, ProductId parseado=${productId}`);
-
-                          if (isNaN(quantity) || quantity <= 0 || isNaN(productId)) {
-                              console.warn(`[ANULACIÓN ${saleId}] Datos inválidos para item ${index + 1} (cantidad o ID). Saltando.`);
+                // Asegurarse de que sea un array
+                if (Array.isArray(productsSold)) {
+                    // Crear promesas para restaurar stock
+                    const restoreStockPromises = productsSold.map((item, index) => {
+                         // Validar item
+                         if (!item || typeof item !== 'object') {
+                              console.warn(`[ANULACIÓN ${saleId}] Item ${index + 1} inválido (no es objeto). Saltando.`);
                               return Promise.resolve();
-                          }
+                         }
+                         const quantity = parseInt(item.cantidad, 10);
+                         const productId = parseInt(item.productId, 10); // Leer productId
 
-                          console.log(`[ANULACIÓN ${saleId}] Ejecutando UPDATE para productId ${productId}, cantidad +${quantity}`);
-                          const restoreQuery = 'UPDATE products SET stock = stock + $1 WHERE id = $2';
-                          return client.query(restoreQuery, [quantity, productId])
-                            .then(result => {
-                                console.log(`[ANULACIÓN ${saleId}] UPDATE para productId ${productId} completado. Filas afectadas: ${result.rowCount}`);
-                            })
-                            .catch(updateError => {
-                                console.error(`[ANULACIÓN ${saleId}] Error al actualizar stock para productId ${productId}:`, updateError);
-                                throw updateError;
-                            });
-                     });
-                     await Promise.all(restoreStockPromises);
-                     console.log(`[ANULACIÓN ${saleId}] Todas las promesas de restauración de stock completadas.`);
-                 } else {
-                      console.warn(`[ANULACIÓN ${saleId}] 'productsSold' no es un array después del procesamiento. No se restauró stock.`);
-                 }
+                         // Validar quantity y productId
+                         if (isNaN(quantity) || quantity <= 0 || isNaN(productId)) {
+                             console.warn(`[ANULACIÓN ${saleId}] Datos inválidos para item ${index + 1} (cantidad o ID). Saltando.`);
+                             return Promise.resolve();
+                         }
 
-                 await client.query('COMMIT');
-                 console.log(`[ANULACIÓN ${saleId}] Transacción COMMIT exitosa.`);
-                 return {
-                     statusCode: 200,
-                     headers,
-                     body: JSON.stringify({ status: 'success', message: `Venta ${saleId} anulada y stock restaurado.` }),
-                 };
+                         // Consulta para aumentar stock
+                         const restoreQuery = 'UPDATE products SET stock = stock + $1 WHERE id = $2';
+                         return client.query(restoreQuery, [quantity, productId])
+                           .catch(updateError => {
+                               console.error(`[ANULACIÓN ${saleId}] Error al actualizar stock para productId ${productId}:`, updateError);
+                               throw updateError; // Fallar transacción si una actualización falla
+                           });
+                    });
+                    // Esperar a que terminen todas las actualizaciones
+                    await Promise.all(restoreStockPromises);
+                } else {
+                     // Si no fue array después de procesar
+                     console.warn(`[ANULACIÓN ${saleId}] 'productsSold' no es un array después del procesamiento. No se restauró stock.`);
+                }
 
-             } catch (transactionError) {
-                 await client.query('ROLLBACK');
-                 // Loguear el error específico de la transacción
-                 console.error(`[ANULACIÓN ${saleId || 'N/A'}] !!! Error en transacción de anulación, ROLLBACK ejecutado:`, transactionError);
-                  const userFriendlyMessage = transactionError.message.includes("ya ha sido anulada") || transactionError.message.includes("no encontrada") || transactionError.message.includes("Formato de productos inválido") || transactionError.message.includes("Tipo inesperado")
-                     ? transactionError.message
-                     : 'Error al intentar anular la venta.';
-                 return {
-                     statusCode: 500,
-                     headers,
-                     body: JSON.stringify({ status: 'error', message: userFriendlyMessage, details: transactionError.message }),
-                 };
-             }
+                // Confirmar transacción
+                await client.query('COMMIT');
+                return {
+                    statusCode: 200, // OK
+                    headers,
+                    body: JSON.stringify({ status: 'success', message: `Venta ${saleId} anulada y stock restaurado.` }),
+                };
+
+            } catch (transactionError) {
+                // Revertir transacción en caso de error
+                await client.query('ROLLBACK');
+                console.error(`[ANULACIÓN ${saleId || 'N/A'}] Error en transacción de anulación:`, transactionError);
+                 const userFriendlyMessage = transactionError.message.includes("ya ha sido anulada") || transactionError.message.includes("no encontrada") || transactionError.message.includes("Formato de productos inválido") || transactionError.message.includes("Tipo inesperado")
+                    ? transactionError.message
+                    : 'Error al intentar anular la venta.';
+                return {
+                    statusCode: 500, // Internal Server Error (o 4xx según el caso)
+                    headers,
+                    body: JSON.stringify({ status: 'error', message: userFriendlyMessage, details: transactionError.message }),
+                };
+            }
         }
 
-        // Si el método no coincide con GET, POST o PUT
-        console.warn(`Método no permitido recibido: ${event.httpMethod}`);
+        // Si el método no es GET, POST o PUT
         return {
             statusCode: 405, // Method Not Allowed
             headers,
@@ -297,10 +267,10 @@ exports.handler = async (event) => {
         };
 
     } catch (error) {
-        // Capturar errores generales (ej. error al obtener cliente del pool)
-        console.error('!!! Error general en la función sales (antes de entrar a métodos específicos):', error);
+        // Capturar errores generales (ej., fallo al conectar al pool)
+        console.error('Error general en la función sales:', error);
         return {
-            statusCode: 500,
+            statusCode: 500, // Internal Server Error
             headers,
             body: JSON.stringify({ status: 'error', message: 'Error interno del servidor.', details: error.message }),
         };
@@ -308,12 +278,7 @@ exports.handler = async (event) => {
         // Asegurarse de liberar siempre el cliente si se obtuvo
         if (client) {
             client.release();
-            console.log("Cliente de base de datos liberado.");
-        } else {
-             console.log("No se obtuvo cliente, no se libera.");
         }
-        // No cerrar el pool aquí si quieres reutilizarlo en futuras invocaciones (Netlify maneja esto)
-        // await pool.end();
     }
 };
 
