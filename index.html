@@ -475,14 +475,23 @@
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) {
-                        const errorData = await response.json();
+                        // Intentar parsear el error como JSON
+                        let errorData = { message: `Error HTTP: ${response.status}` };
+                        try {
+                            errorData = await response.json();
+                        } catch (parseError) {
+                            // Si no es JSON, usar el texto
+                            errorData.message = await response.text() || errorData.message;
+                        }
+                         console.error("Error response from server:", errorData);
                         throw new Error(errorData.message || `Error HTTP: ${response.status}`);
                     }
-                    return response;
+                    return response; // Devolver la respuesta completa si es OK
                 } catch (error) {
-                    console.warn(`Intento ${attempt + 1} fallido: ${error.message}`);
+                    console.warn(`Intento ${attempt + 1} fallido (${url}): ${error.message}`);
                     if (attempt + 1 >= maxRetries) {
-                        console.error("Todos los intentos de fetch fallaron.");
+                        console.error(`Todos los intentos de fetch fallaron para ${url}.`);
+                        // Lanzar el error original para que sea manejado por el .catch externo
                         throw error;
                     }
                     const delay = Math.pow(2, attempt) * 1000;
@@ -515,7 +524,7 @@
                 resolve({dataURL: canvas.toDataURL('image/png'), width: img.width, height: img.height});
             };
             img.onerror = () => resolve(null);
-            img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
+            img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime(); // Cache busting
         });
 
         const loadImageAsJpegDataUrl = (url) => new Promise((resolve) => {
@@ -530,7 +539,7 @@
                 resolve({dataURL: canvas.toDataURL('image/jpeg', 0.8), width: img.width, height: img.height});
             };
             img.onerror = () => resolve(null);
-            img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
+             img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime(); // Cache busting
         });
 
         function initTabs() {
@@ -631,7 +640,7 @@
                 products = result.status === 'success' ? result.data.map(mapProductToFrontend) : [];
             } catch (error) {
                 console.error("Fallo al cargar productos:", error);
-                showNotification("No se pudieron cargar los productos. Revisa tu conexión.", 'error');
+                showNotification(`No se pudieron cargar los productos: ${error.message}`, 'error');
             }
         }
 
@@ -645,7 +654,7 @@
                 }
             } catch (error) {
                 console.error("Fallo al cargar las ventas:", error);
-                showNotification("No se pudieron cargar las ventas. Revisa tu conexión.", 'error');
+                showNotification(`No se pudieron cargar las ventas: ${error.message}`, 'error');
             }
         }
 
@@ -696,7 +705,11 @@
                 filteredProducts.forEach(p => {
                     const div = document.createElement('div');
                     div.className = 'p-3 hover:bg-gray-100 cursor-pointer';
-                    div.textContent = `${p.nombre} (Bs ${p.precioVenta}) - Stock: ${p.cantidad}`;
+                    // Mostrar precio de descuento si existe, si no, el normal
+                    const displayPrice = (p.precioDescuento && parseFloat(p.precioDescuento) > 0)
+                                        ? parseFloat(p.precioDescuento).toFixed(2)
+                                        : parseFloat(p.precioVenta).toFixed(2);
+                    div.textContent = `${p.nombre} (Bs ${displayPrice}) - Stock: ${p.cantidad}`;
                     div.onclick = () => addToCart(p);
                     resultsContainer.appendChild(div);
                 });
@@ -704,6 +717,7 @@
                 resultsContainer.innerHTML = '<div class="p-3 text-gray-500">No se encontraron productos</div>';
             }
         }
+
 
         function addToCart(product) {
             const latestProductInfo = products.find(p => p.id === product.id); // Usar ID para encontrar el producto exacto
@@ -742,6 +756,10 @@
                 cartItemsContainer.innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
             } else {
                 cart.forEach((item, index) => {
+                     // Obtener el stock actual del producto desde la lista principal
+                     const currentProductInfo = products.find(p => p.id === item.id);
+                     const currentStock = currentProductInfo ? currentProductInfo.cantidad : 0;
+
                     const subtotal = item.quantity * item.customPrice;
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -752,7 +770,7 @@
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-800 align-middle">${item.nombre}</td>
                         <td class="px-4 py-3 text-sm align-middle"><input type="number" step="0.01" value="${item.customPrice.toFixed(2)}" onchange="updateItemPrice(${index}, this.value)" class="w-24 text-center border rounded-lg py-1"></td>
-                        <td class="px-4 py-3 text-sm text-center align-middle"><input type="number" min="1" max="${item.cantidad}" value="${item.quantity}" onchange="setQuantity(${index}, this.value)" class="w-20 text-center border rounded-lg py-1"></td>
+                        <td class="px-4 py-3 text-sm text-center align-middle"><input type="number" min="0" max="${currentStock}" value="${item.quantity}" onchange="setQuantity(${index}, this.value)" class="w-20 text-center border rounded-lg py-1"></td>
                         <td class="px-4 py-3 text-sm text-right font-medium align-middle">Bs ${subtotal.toFixed(2)}</td>
                         <td class="px-2 py-3 text-center align-middle"><button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 font-bold text-xl">&times;</button></td>
                     `;
@@ -775,8 +793,8 @@
 
             let quantity = parseInt(newQuantity);
 
-            if (isNaN(quantity) || quantity < 1) {
-                quantity = 1; // Mínimo 1
+            if (isNaN(quantity) || quantity < 0) { // Permitir 0 para remover
+                quantity = 0;
             }
 
             if (quantity > maxStock) {
@@ -784,10 +802,7 @@
                 quantity = maxStock; // Ajustar al máximo disponible
             }
 
-            if (maxStock === 0 && quantity > 0) {
-                 showNotification(`Producto sin stock.`, 'error');
-                 cart.splice(index, 1); // Remover si se intenta poner cantidad > 0 y no hay stock
-            } else if (quantity === 0) {
+            if (quantity === 0) {
                  cart.splice(index, 1); // Remover si la cantidad se establece en 0
             } else {
                  cart[index].quantity = quantity;
@@ -829,7 +844,7 @@
                     SKU: item.sku,
                     cantidad: item.quantity,
                     precio: item.customPrice,
-                    'Precio (Compra)': item.precioCompra
+                    'Precio (Compra)': item.precioCompra // Importante mantenerlo para futuros reportes
                 })),
                 total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0),
                 user: {
@@ -860,6 +875,11 @@
                     displayNextSaleId();
 
                 } else {
+                    // Si el error es de stock insuficiente, re-cargar productos para mostrar stock actualizado
+                    if (result.message && result.message.toLowerCase().includes('stock insuficiente')) {
+                        await fetchProducts();
+                        renderCart(); // Re-renderizar carrito para reflejar stock actual si es necesario
+                    }
                     throw new Error(result.message || 'Error desconocido del servidor.');
                 }
             } catch (error) {
@@ -868,9 +888,11 @@
             } finally {
                 buttonText.classList.remove('hidden');
                 loader.classList.add('hidden');
+                // Habilitar botón solo si el carrito no está vacío (podría haberse vaciado por error de stock)
                 button.disabled = cart.length === 0;
             }
         }
+
 
         function generateSalePDF(saleId, saleData) {
             // Asegurarse de que 'items' sea un array antes de pasarlo
@@ -957,13 +979,19 @@
             // Asegurarse de que data.items es un array
             if (Array.isArray(data.items)) {
                 data.items.forEach(item => {
+                    // Asegurarse de que item.precio es un número antes de llamar a toFixed
+                    const price = typeof item.precio === 'number' ? item.precio : 0;
+                    const quantity = typeof item.cantidad === 'number' ? item.cantidad : 0;
+                    const subtotal = quantity * price;
+
                     const description = `${item.Nombre}\n(SKU: ${item.SKU || 'N/A'})`;
-                    const itemData = [ item.cantidad, description, `Bs ${item.precio.toFixed(2)}`, `Bs ${(item.cantidad * item.precio).toFixed(2)}` ];
+                    const itemData = [ quantity, description, `Bs ${price.toFixed(2)}`, `Bs ${subtotal.toFixed(2)}` ];
                     tableRows.push(itemData);
                 });
             } else {
                  console.error("data.items no es un array en generateDocumentPDF:", data.items);
             }
+
 
             doc.autoTable({
                 head: [tableColumn],
@@ -973,9 +1001,15 @@
                 headStyles: { fillColor: '#cdcdcd', textColor: '#000000' },
                 styles: { cellPadding: 2, fontSize: 9 },
                 didParseCell: function (data) {
-                    if (data.column.dataKey === 1) {
+                    if (data.column.dataKey === 1) { // Columna de Descripción
                         data.cell.styles.fontSize = 8;
                     }
+                     if (data.column.index >= 2) { // Columnas numéricas (P. Unit, Subtotal)
+                        data.cell.styles.halign = 'right';
+                    }
+                     if (data.column.index === 0) { // Columna Cantidad
+                         data.cell.styles.halign = 'center';
+                     }
                 }
             });
 
@@ -1009,6 +1043,7 @@
             return { pdfBlob, fileName };
         }
 
+
         function renderSalesResults() {
             const searchTerm = document.getElementById('search-sales-input').value.toLowerCase();
             const container = document.getElementById('sales-results-container');
@@ -1026,7 +1061,7 @@
                 return;
             }
 
-            // Ordenar por fecha descendente antes de renderizar
+            // Ordenar por fecha descendente antes de renderizar (ya se hace en fetchSales, pero aseguramos aquí)
             filteredSales.sort((a, b) => new Date(b.fechaVenta) - new Date(a.fechaVenta));
 
             filteredSales.forEach(sale => {
@@ -1038,15 +1073,41 @@
 
                 let productsHtml = '<ul>';
                 try {
-                    const saleProducts = (typeof sale.productosVendidos === 'string') ? JSON.parse(sale.productosVendidos) : sale.productosVendidos;
+                    // Primero, intentar parsear si es string. Si falla o no es string, usar directamente.
+                    let saleProducts;
+                    if (typeof sale.productosVendidos === 'string') {
+                        try {
+                            saleProducts = JSON.parse(sale.productosVendidos);
+                        } catch (e) {
+                            console.error(`Error parsing productosVendidos for sale ${sale.saleId}:`, e);
+                            saleProducts = null; // Marcar como inválido si falla el parseo
+                        }
+                    } else {
+                        saleProducts = sale.productosVendidos; // Usar directamente si no es string
+                    }
+
+                    // Asegurarse de que sea un array antes de iterar
                     if (Array.isArray(saleProducts)) {
                         saleProducts.forEach(p => {
-                            const price = p.precio !== undefined ? parseFloat(p.precio).toFixed(2) : 'N/A';
-                            productsHtml += `<li class="text-xs">${p.cantidad} x ${p.Nombre} (SKU: ${p.SKU}) @ Bs ${price}</li>`;
+                            // Validar que 'p' sea un objeto y tenga las propiedades esperadas
+                            if (p && typeof p === 'object' && p.hasOwnProperty('cantidad') && p.hasOwnProperty('Nombre') && p.hasOwnProperty('precio')) {
+                                const price = p.precio !== undefined ? parseFloat(p.precio).toFixed(2) : 'N/A';
+                                const sku = p.SKU || 'N/A';
+                                productsHtml += `<li class="text-xs">${p.cantidad} x ${p.Nombre} (SKU: ${sku}) @ Bs ${price}</li>`;
+                            } else {
+                                console.warn(`Item inválido encontrado en productosVendidos para venta ${sale.saleId}:`, p);
+                                productsHtml += `<li class="text-xs text-red-500">Error: Item inválido</li>`;
+                            }
                         });
+                    } else {
+                         productsHtml += `<li class="text-xs text-red-500">Error: Datos de productos no válidos</li>`;
                     }
-                } catch(e) { productsHtml += '<li>Error al leer productos</li>'; }
+                } catch(e) {
+                     console.error(`Error procesando productosVendidos (catch general) para venta ${sale.saleId}:`, e);
+                     productsHtml += `<li class="text-xs text-red-500">Error al leer productos</li>`;
+                }
                 productsHtml += '</ul>';
+
 
                 const totalVenta = sale.totalVenta !== undefined ? parseFloat(sale.totalVenta).toFixed(2) : 'N/A';
 
@@ -1090,21 +1151,24 @@
             button.disabled = true;
 
             try {
-                const response = await robustFetch(`${API_BASE_URL}/sales`, { // Usar PUT al endpoint principal de sales
+                // Usar PUT al endpoint principal de sales
+                const response = await robustFetch(`${API_BASE_URL}/sales`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ saleId: saleId }) // Enviar solo el ID
                 });
-                const result = await response.json();
+                const result = await response.json(); // Leer respuesta como JSON
                 if (result.status === 'success') {
                     showNotification(result.message, 'success');
                     await Promise.all([fetchSales(), fetchProducts()]); // Recargar ventas y productos
                     renderSalesResults(); // Actualizar la lista de ventas
                 } else {
+                    // Si el backend devuelve un error, lanzarlo para que lo capture el catch
                     throw new Error(result.message || 'Error desconocido del servidor.');
                 }
             } catch (error) {
                 console.error('Error al anular la venta:', error);
+                // Mostrar el mensaje de error que viene del backend o el error de red
                 showNotification(`Error: ${error.message}`, 'error');
             } finally {
                 document.getElementById('annul-confirm-modal').classList.add('hidden');
@@ -1125,7 +1189,24 @@
             }
 
             try {
-                const saleItems = (typeof saleToReprint.productosVendidos === 'string') ? JSON.parse(saleToReprint.productosVendidos) : saleToReprint.productosVendidos;
+                 let saleItems;
+                 // Intentar parsear si es string
+                 if (typeof saleToReprint.productosVendidos === 'string') {
+                     try {
+                         saleItems = JSON.parse(saleToReprint.productosVendidos);
+                     } catch (e) {
+                         console.error(`Error parsing productosVendidos for reprint ${saleId}:`, e);
+                         saleItems = []; // Default a array vacío si falla el parseo
+                     }
+                 } else {
+                     saleItems = saleToReprint.productosVendidos; // Usar directamente si no es string
+                 }
+
+                // Asegurar que saleItems sea un array
+                if (!Array.isArray(saleItems)) {
+                    console.warn(`productosVendidos for reprint ${saleId} is not an array:`, saleItems);
+                    saleItems = [];
+                }
 
                 const saleData = {
                     customer: {
@@ -1133,7 +1214,7 @@
                         contact: saleToReprint.contacto,
                         id: saleToReprint.nitCi
                     },
-                    items: Array.isArray(saleItems) ? saleItems : [],
+                    items: saleItems,
                     total: parseFloat(saleToReprint.totalVenta)
                 };
                 const { pdfBlob, fileName } = generateSalePDF(saleId, saleData);
@@ -1143,6 +1224,7 @@
                 showNotification("No se pudo generar el PDF para esta venta.", 'error');
             }
         }
+
 
         function showProductModal(product) {
             document.getElementById('modalProductImage').src = product.urlFoto1 || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen';
@@ -1182,10 +1264,10 @@
             textarea.select();
             try {
                 document.execCommand('copy');
-                const originalIcon = buttonElement.innerHTML;
+                const originalHTML = buttonElement.innerHTML; // Guardar HTML original
                 buttonElement.innerHTML = '¡Copiado!';
                 setTimeout(() => {
-                    buttonElement.innerHTML = originalIcon;
+                    buttonElement.innerHTML = originalHTML; // Restaurar HTML original
                 }, 1500);
             } catch (err) {
                 showNotification('No se pudo copiar el texto.', 'error');
@@ -1195,7 +1277,7 @@
 
         function showQrModal() {
             const qrSrc = document.getElementById('pos-qr-code').src;
-            if (qrSrc) {
+            if (qrSrc && !qrSrc.includes('placehold.co')) { // No mostrar modal para placeholder
                 document.getElementById('modalQrImage').src = qrSrc;
                 document.getElementById('qrCodeModal').classList.remove('hidden');
             }
@@ -1215,15 +1297,37 @@
             modalTitle.textContent = title;
             modalText.textContent = text;
 
-            const dataToShare = { files: [new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' })] };
+            // Crear el objeto File ANTES de verificar canShare
+            const fileToShare = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
+            const dataToShare = { files: [fileToShare] };
+
             if (navigator.share && navigator.canShare && navigator.canShare(dataToShare)) {
                 shareBtn.classList.remove('hidden');
+                shareBtn.onclick = async () => {
+                    try {
+                        await navigator.share({
+                            files: [fileToShare], // Usar el File creado
+                            title: `Documento: ${currentPdfFileName}`,
+                            text: 'Documento generado desde el sistema ArelyShop.',
+                        });
+                    } catch (error) {
+                        console.error('Error al compartir:', error);
+                        if (error.name !== 'AbortError') {
+                            showNotification('No se pudo compartir el archivo.', 'error');
+                        }
+                    } finally {
+                        modal.classList.add('hidden');
+                    }
+                };
             } else {
                 shareBtn.classList.add('hidden');
+                shareBtn.onclick = null; // Limpiar handler si no se puede compartir
+                 console.log("Web Share API no soportada o no se puede compartir este tipo de archivo.");
             }
 
             modal.classList.remove('hidden');
 
+            // Asegurarse de que el handler de descarga esté siempre activo
             downloadBtn.onclick = () => {
                  const link = document.createElement('a');
                  link.href = URL.createObjectURL(currentPdfBlob);
@@ -1231,31 +1335,15 @@
                  document.body.appendChild(link);
                  link.click();
                  document.body.removeChild(link);
+                 URL.revokeObjectURL(link.href); // Liberar memoria
                  modal.classList.add('hidden');
-            };
-
-            shareBtn.onclick = async () => {
-                try {
-                    const file = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
-                    await navigator.share({
-                        files: [file],
-                        title: `Documento: ${currentPdfFileName}`,
-                        text: 'Documento generado desde el sistema ArelyShop.',
-                    });
-                } catch (error) {
-                    console.error('Error al compartir:', error);
-                    if (error.name !== 'AbortError') {
-                        showNotification('No se pudo compartir el archivo.', 'error');
-                    }
-                } finally {
-                    modal.classList.add('hidden');
-                }
             };
 
             closeModalBtn.onclick = () => {
                 modal.classList.add('hidden');
             };
         }
+
 
         function startScanner(targetInputId) {
             document.getElementById('scanner-modal').classList.remove('hidden');
@@ -1266,30 +1354,81 @@
                 stopScanner();
 
                 if (targetInputId === 'search-product') {
-                    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true });
+                    // Simular evento 'Enter' para buscar el producto escaneado
+                    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
                     targetInput.dispatchEvent(enterEvent);
                 }
             };
 
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }; // Probar aspectRatio
 
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (error) => {})
-                .catch(err => {
-                    console.error("No se pudo iniciar el escáner.", err);
-                    showNotification("No se pudo iniciar la cámara. Asegúrate de dar los permisos necesarios.", 'error');
-                    stopScanner();
-                });
+            // Crear instancia si no existe
+            if (!html5QrCode) {
+                 try {
+                    html5QrCode = new Html5Qrcode("reader");
+                 } catch (e) {
+                     console.error("Error inicializando Html5Qrcode:", e);
+                     showNotification("Error al inicializar el escáner.", "error");
+                     document.getElementById('scanner-modal').classList.add('hidden');
+                     return;
+                 }
+            }
+
+
+             // Intentar obtener cámaras y luego iniciar
+             Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    const cameraId = devices.length > 1 ? devices[1].id : devices[0].id; // Preferir cámara trasera si hay más de una
+                    html5QrCode.start(
+                        cameraId, // Usar ID de cámara específico
+                        config,
+                        onScanSuccess,
+                        (errorMessage) => {
+                            // parse error, ideally ignore it. No hacer nada aquí para evitar logs innecesarios
+                            // console.warn(`QR Code no detectado, error = ${errorMessage}`);
+                        })
+                    .catch(err => {
+                        console.error("No se pudo iniciar el escáner con ID específico.", err);
+                        // Fallback a default si falla con ID
+                        html5QrCode.start( { facingMode: "environment" }, config, onScanSuccess, (e)=>{})
+                        .catch(errFallback => {
+                              console.error("No se pudo iniciar el escáner (fallback).", errFallback);
+                              showNotification("No se pudo iniciar la cámara. Revisa los permisos.", 'error');
+                              stopScanner(); // Asegurarse de cerrar el modal si falla
+                        });
+                    });
+                } else {
+                    console.error("No se encontraron cámaras.");
+                     showNotification("No se detectaron cámaras en tu dispositivo.", 'error');
+                     stopScanner();
+                }
+            }).catch(err => {
+                console.error("Error obteniendo cámaras:", err);
+                 showNotification("Error al acceder a las cámaras.", 'error');
+                 stopScanner();
+            });
         }
 
+
         function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().catch(err => {}).finally(() => {
+            // Asegurarse de que html5QrCode existe y tiene el método isScanning
+             if (html5QrCode && typeof html5QrCode.isScanning === 'boolean' && html5QrCode.isScanning) {
+                html5QrCode.stop().then(ignore => {
+                    // QR Code scanning is stopped.
+                    console.log("QR Code scanning stopped.");
+                }).catch(err => {
+                    // Stop failed, handle it.
+                    console.error("Fallo al detener el escáner:", err);
+                }).finally(() => {
+                    // Ocultar modal independientemente del resultado de stop()
                     document.getElementById('scanner-modal').classList.add('hidden');
                 });
             } else {
+                 // Si no está escaneando o no existe, solo ocultar el modal
                  document.getElementById('scanner-modal').classList.add('hidden');
             }
         }
+
 
     </script>
 </body>
