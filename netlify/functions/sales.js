@@ -2,16 +2,16 @@
 const { Pool } = require('pg');
 
 const headers = {
-    'Access-Control-Allow-Origin': '*', // Permite solicitudes desde cualquier origen
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS', // Permite GET, POST, PUT y OPTIONS
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
 };
 
 exports.handler = async (event) => {
     // --- Manejo de OPTIONS (Preflight CORS) ---
     if (event.httpMethod === 'OPTIONS') {
         return {
-            statusCode: 204, // No Content
+            statusCode: 204,
             headers,
             body: ''
         };
@@ -24,7 +24,7 @@ exports.handler = async (event) => {
         }
     });
 
-    const client = await pool.connect(); // Usar un cliente para la transacción
+    const client = await pool.connect();
 
     try {
         // --- OBTENER TODAS LAS VENTAS ---
@@ -41,7 +41,6 @@ exports.handler = async (event) => {
         if (event.httpMethod === 'POST') {
             const saleData = JSON.parse(event.body);
 
-            // Validar datos básicos
             if (!saleData || !saleData.saleId || !Array.isArray(saleData.items) || !saleData.user) {
                 return {
                     statusCode: 400,
@@ -51,9 +50,8 @@ exports.handler = async (event) => {
             }
 
             try {
-                await client.query('BEGIN'); // Iniciar transacción
+                await client.query('BEGIN');
 
-                // 1. Insertar la venta
                 const saleQuery = `
                     INSERT INTO sales ("saleId", "nombreCliente", "contacto", "nitCi", "totalVenta", "productosVendidos", "userId", "userName", "estado")
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Completada')
@@ -65,22 +63,20 @@ exports.handler = async (event) => {
                     saleData.customer.contact,
                     saleData.customer.id,
                     saleData.total,
-                    JSON.stringify(saleData.items), // Guardar productos como JSON
+                    JSON.stringify(saleData.items),
                     saleData.user.id,
-                    saleData.user.fullName
+                    saleData.user.fullName // Asegúrate que el frontend envíe fullName
                 ];
                 const saleResult = await client.query(saleQuery, saleValues);
                 const newSale = saleResult.rows[0];
 
-                // 2. Actualizar stock de cada producto
                 const updateStockPromises = saleData.items.map(item => {
                     const updateQuery = `
                         UPDATE products SET stock = stock - $1 WHERE id = $2 AND stock >= $1;
                     `;
-                    // Asegurarse de que productId y cantidad existan y sean números
                     const quantity = parseInt(item.cantidad, 10);
-                    const productId = parseInt(item.productId, 10);
-                    if (isNaN(quantity) || quantity <= 0 || isNaN(productId)) { // Añadida validación quantity > 0
+                    const productId = parseInt(item.productId, 10); // Asegúrate que el frontend envíe productId
+                    if (isNaN(quantity) || quantity <= 0 || isNaN(productId)) {
                         throw new Error(`Datos de producto inválidos en la venta: ${item.Nombre || 'Desconocido'} (ID: ${item.productId}, Cant: ${item.cantidad})`);
                     }
                     return client.query(updateQuery, [quantity, productId]);
@@ -88,7 +84,6 @@ exports.handler = async (event) => {
 
                 const updateResults = await Promise.all(updateStockPromises);
 
-                // Verificar si alguna actualización de stock falló (ej. stock insuficiente)
                 for (let i = 0; i < updateResults.length; i++) {
                     if (updateResults[i].rowCount === 0) {
                         const failedItem = saleData.items[i];
@@ -99,33 +94,33 @@ exports.handler = async (event) => {
                     }
                 }
 
-                await client.query('COMMIT'); // Confirmar transacción
+                await client.query('COMMIT');
                 return {
-                    statusCode: 201, // Created
+                    statusCode: 201,
                     headers,
                     body: JSON.stringify({ status: 'success', data: newSale }),
                 };
 
             } catch (transactionError) {
-                await client.query('ROLLBACK'); // Revertir en caso de error
+                await client.query('ROLLBACK');
                 console.error('Error en transacción de venta:', transactionError);
-                // Devolver el mensaje de error específico si es una validación nuestra
                 const specificErrorMessages = ["Datos de producto inválidos", "Stock insuficiente"];
                 const errorMessage = specificErrorMessages.some(msg => transactionError.message.includes(msg))
                     ? transactionError.message
                     : 'Error general al procesar la venta.';
 
                 return {
-                    statusCode: 500, // Usar 400 Bad Request si es error de datos? Podría ser. Dejemos 500 por ahora.
+                    statusCode: 500,
                     headers,
                     body: JSON.stringify({ status: 'error', message: errorMessage, details: transactionError.message }),
                 };
             }
         }
 
-        // --- ANULAR VENTA (Depuración Mejorada) ---
+        // --- ANULAR VENTA (Depuración Detallada) ---
         if (event.httpMethod === 'PUT') {
             const { saleId } = JSON.parse(event.body);
+            console.log(`[ANULACIÓN ${saleId}] Iniciando proceso.`); // LOG
 
             if (!saleId) {
                  return {
@@ -136,70 +131,81 @@ exports.handler = async (event) => {
             }
 
              try {
-                await client.query('BEGIN'); // Iniciar transacción
+                await client.query('BEGIN');
+                console.log(`[ANULACIÓN ${saleId}] Transacción iniciada.`); // LOG
 
-                // 1. Obtener la venta y verificar que no esté ya anulada
-                const getSaleQuery = 'SELECT * FROM sales WHERE "saleId" = $1 FOR UPDATE'; // Bloquear la fila para evitar concurrencia
+                const getSaleQuery = 'SELECT * FROM sales WHERE "saleId" = $1 FOR UPDATE';
                 const saleResult = await client.query(getSaleQuery, [saleId]);
 
                 if (saleResult.rows.length === 0) {
                     throw new Error(`Venta con ID "${saleId}" no encontrada.`);
                 }
                 const sale = saleResult.rows[0];
+                console.log(`[ANULACIÓN ${saleId}] Venta encontrada. Estado actual: ${sale.estado}`); // LOG
                 if (sale.estado === 'Anulada') {
                     throw new Error(`La venta "${saleId}" ya ha sido anulada previamente.`);
                 }
 
-                 // 2. Marcar la venta como Anulada
                  const annulQuery = 'UPDATE sales SET estado = $1 WHERE "saleId" = $2';
                  await client.query(annulQuery, ['Anulada', saleId]);
+                 console.log(`[ANULACIÓN ${saleId}] Estado de venta actualizado a 'Anulada'.`); // LOG
 
-                // 3. Restaurar stock de los productos
                 let productsSold;
                 try {
-                    // Validar si productosVendidos es null o undefined antes de parsear
+                    console.log(`[ANULACIÓN ${saleId}] Contenido de productosVendidos:`, sale.productosVendidos); // LOG DETALLADO
                     if (sale.productosVendidos == null) {
-                         console.warn(`'productosVendidos' es null o undefined para la venta ${saleId}. No se restaurará stock.`);
-                         productsSold = []; // Tratar como si no hubiera productos
+                         console.warn(`[ANULACIÓN ${saleId}] 'productosVendidos' es null o undefined. No se restaurará stock.`);
+                         productsSold = [];
                     } else {
+                        // Intentar parsear el JSON
                         productsSold = JSON.parse(sale.productosVendidos);
+                        console.log(`[ANULACIÓN ${saleId}] JSON 'productosVendidos' parseado correctamente.`); // LOG
                     }
                 } catch (parseError) {
-                     console.error(`Error parseando 'productosVendidos' para la venta ${saleId}:`, parseError);
+                     console.error(`[ANULACIÓN ${saleId}] Error parseando 'productosVendidos':`, parseError);
+                     // Lanzar el error específico que ya teníamos
                      throw new Error(`Formato de productos inválido en la venta ${saleId}. No se pudo restaurar stock.`);
                 }
 
-
                 if (Array.isArray(productsSold)) {
-                    const restoreStockPromises = productsSold.map(item => {
-                         // Validaciones más estrictas antes de ejecutar la query
+                    console.log(`[ANULACIÓN ${saleId}] Procesando ${productsSold.length} productos para restaurar stock.`); // LOG
+                    const restoreStockPromises = productsSold.map((item, index) => {
+                         console.log(`[ANULACIÓN ${saleId}] Procesando item ${index + 1}:`, item); // LOG DE CADA ITEM
                          if (!item || typeof item !== 'object') {
-                              console.warn(`Item inválido (no es objeto) encontrado al anular venta ${saleId}:`, item);
-                              return Promise.resolve(); // Saltar item
+                              console.warn(`[ANULACIÓN ${saleId}] Item ${index + 1} inválido (no es objeto). Saltando.`);
+                              return Promise.resolve();
                          }
                          const quantity = parseInt(item.cantidad, 10);
-                         const productId = parseInt(item.productId, 10);
+                         const productId = parseInt(item.productId, 10); // <--- LEER productId
+
+                         console.log(`[ANULACIÓN ${saleId}] Item ${index + 1}: Cantidad parseada=${quantity}, ProductId parseado=${productId}`); // LOG DE PARSEO
 
                          if (isNaN(quantity) || quantity <= 0 || isNaN(productId)) {
-                             console.warn(`Datos de producto inválidos (cantidad o ID) encontrados al anular venta ${saleId}:`, item);
-                             // Considerar lanzar un error aquí si es crítico que TODOS los stocks se restauren
-                             // throw new Error(`Datos inválidos para producto ${item.Nombre || item.productId} en venta ${saleId}`);
-                             return Promise.resolve(); // O saltar este item problemático
+                             console.warn(`[ANULACIÓN ${saleId}] Datos inválidos para item ${index + 1} (cantidad o ID). Saltando.`);
+                             // Podrías lanzar error aquí si es crítico
+                             // throw new Error(`Datos inválidos para producto en venta ${saleId}`);
+                             return Promise.resolve();
                          }
 
+                         console.log(`[ANULACIÓN ${saleId}] Ejecutando UPDATE para productId ${productId}, cantidad +${quantity}`); // LOG ANTES DE QUERY
                          const restoreQuery = 'UPDATE products SET stock = stock + $1 WHERE id = $2';
-                         return client.query(restoreQuery, [quantity, productId]);
+                         return client.query(restoreQuery, [quantity, productId])
+                           .then(result => {
+                               console.log(`[ANULACIÓN ${saleId}] UPDATE para productId ${productId} completado. Filas afectadas: ${result.rowCount}`); // LOG DESPUÉS DE QUERY
+                           })
+                           .catch(updateError => {
+                               console.error(`[ANULACIÓN ${saleId}] Error al actualizar stock para productId ${productId}:`, updateError); // LOG DE ERROR EN QUERY
+                               throw updateError; // Re-lanzar para que falle la transacción
+                           });
                     });
                     await Promise.all(restoreStockPromises);
+                    console.log(`[ANULACIÓN ${saleId}] Todas las promesas de restauración de stock completadas.`); // LOG
                 } else {
-                     // Esto no debería ocurrir si el parseo fue exitoso y no era null/undefined, pero por si acaso.
-                     console.warn(`No se pudo restaurar stock para la venta ${saleId} porque 'productosVendidos' no es un array válido después del parseo.`);
-                     // Podrías lanzar un error aquí si consideras esto crítico
-                     // throw new Error(`'productosVendidos' no es un array válido para la venta ${saleId}.`);
+                     console.warn(`[ANULACIÓN ${saleId}] 'productosVendidos' no es un array después del parseo. No se restauró stock.`);
                 }
 
-
-                await client.query('COMMIT'); // Confirmar transacción
+                await client.query('COMMIT');
+                console.log(`[ANULACIÓN ${saleId}] Transacción COMMIT exitosa.`); // LOG
                 return {
                     statusCode: 200,
                     headers,
@@ -207,22 +213,19 @@ exports.handler = async (event) => {
                 };
 
             } catch (transactionError) {
-                await client.query('ROLLBACK'); // Revertir en caso de error
-                console.error(`Error en transacción de anulación (${saleId}):`, transactionError);
-                 // Devolver un mensaje más específico si es posible
-                 const userFriendlyMessage = transactionError.message.includes("ya ha sido anulada") || transactionError.message.includes("no encontrada") || transactionError.message.includes("Formato de productos inválido")
+                await client.query('ROLLBACK');
+                console.error(`[ANULACIÓN ${saleId}] Error en transacción, ROLLBACK ejecutado:`, transactionError); // LOG DE ROLLBACK
+                const userFriendlyMessage = transactionError.message.includes("ya ha sido anulada") || transactionError.message.includes("no encontrada") || transactionError.message.includes("Formato de productos inválido")
                     ? transactionError.message
                     : 'Error al intentar anular la venta.';
                 return {
-                    statusCode: 500, // O 404 si no se encontró, 409 si ya estaba anulada?
+                    statusCode: 500,
                     headers,
-                    body: JSON.stringify({ status: 'error', message: userFriendlyMessage, details: transactionError.message }), // Pasar el mensaje original en details
+                    body: JSON.stringify({ status: 'error', message: userFriendlyMessage, details: transactionError.message }),
                 };
             }
         }
 
-
-        // Si no es GET, POST o PUT, retornar método no permitido
         return {
             statusCode: 405,
             headers,
@@ -233,12 +236,13 @@ exports.handler = async (event) => {
         console.error('Error general en la función sales:', error);
         return {
             statusCode: 500,
-            headers, // Incluir headers también en errores generales
+            headers,
             body: JSON.stringify({ status: 'error', message: 'Error interno del servidor.', details: error.message }),
         };
     } finally {
         if (client) {
-            client.release(); // Liberar el cliente de vuelta al pool
+            client.release();
+            console.log("Cliente de base de datos liberado."); // LOG FINAL
         }
     }
 };
