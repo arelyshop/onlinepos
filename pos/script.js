@@ -378,13 +378,13 @@ function setupEventListeners() {
     if(salesResultsContainer) {
         salesResultsContainer.addEventListener('click', (event) => {
             // Delegación para Ver Resumen, Reimprimir, Anular
-            const summaryBtn = event.target.closest('.view-summary-btn'); // Cambiado de view-pdf-btn
-            const reprintBtn = event.target.closest('.reprint-btn'); // Asegurar clase existe
-            const annulBtn = event.target.closest('.annul-btn');     // Asegurar clase existe
+            const summaryBtn = event.target.closest('.view-summary-btn'); // Usar clase para resumen
+            const reprintBtn = event.target.closest('.reprint-btn');
+            const annulBtn = event.target.closest('.annul-btn');
 
             const saleId = summaryBtn?.dataset.saleid || reprintBtn?.dataset.saleid || annulBtn?.dataset.saleid;
 
-            if (summaryBtn && saleId) { showSaleSummaryModal(saleId); } // Llama a la nueva función de resumen
+            if (summaryBtn && saleId) { showSaleSummaryModal(saleId); } // Llama a la nueva función
             else if (reprintBtn && saleId) { reprintSale(saleId); }
             else if (annulBtn && saleId && !annulBtn.disabled) { openAnnulConfirmModal(saleId); }
         });
@@ -401,7 +401,7 @@ function setupEventListeners() {
      if(cancelAnnulBtn) cancelAnnulBtn.addEventListener('click', () => { document.getElementById('annul-confirm-modal')?.classList.add('hidden'); saleIdToAnnul = null; });
     const confirmAnnulBtn = document.getElementById('confirm-annul-btn');
      if(confirmAnnulBtn) confirmAnnulBtn.addEventListener('click', () => { if (saleIdToAnnul) { annulSaleInBackend(saleIdToAnnul); } });
-     const closeSummaryModalBtn = document.getElementById('close-summary-modal-btn'); // Nuevo botón de cierre para resumen
+     const closeSummaryModalBtn = document.getElementById('close-summary-modal-btn'); // Botón de cierre para resumen
      if (closeSummaryModalBtn) closeSummaryModalBtn.addEventListener('click', closeSaleSummaryModal);
 
 
@@ -794,7 +794,3 @@ function closeSaleSummaryModal() { const modal = document.getElementById('sale-s
 
 function startScanner(targetInputId) { if (!html5QrCode) { console.warn("Html5Qrcode no inicializado."); try { const readerElement = document.getElementById("reader"); if (!readerElement) throw new Error("Elemento 'reader' no encontrado."); html5QrCode = new Html5Qrcode("reader"); } catch (e) { console.error("Error re-inicializando:", e); showNotification("Error escáner.", "error"); return; } } const modal = document.getElementById('scanner-modal'); if(modal) modal.classList.remove('hidden'); const onScanSuccess = (decodedText, decodedResult) => { const targetInput = document.getElementById(targetInputId); if (targetInput) { targetInput.value = decodedText; const inputEvent = new Event('input', { bubbles: true }); targetInput.dispatchEvent(inputEvent); if (targetInputId === 'search-product') { const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }); targetInput.dispatchEvent(enterEvent); } } stopScanner(); }; const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }; Html5Qrcode.getCameras().then(devices => { if (devices && devices.length) { const rearCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment')); const camId = rearCam ? rearCam.id : devices[0].id; const state = (typeof html5QrCode.getState === 'function') ? html5QrCode.getState() : null; const SCANNING = 2; if (state !== SCANNING) { html5QrCode.start( camId, config, onScanSuccess, (errorMessage) => {}) .catch(err => { console.warn("Fallo escanear cámara preferida, fallback:", err); const fallbackState = (typeof html5QrCode.getState === 'function') ? html5QrCode.getState() : null; if (fallbackState !== SCANNING) { html5QrCode.start( { facingMode: "environment" }, config, onScanSuccess, (e)=>{}) .catch(errFallback => { console.error("Fallback escáner falló.", errFallback); showNotification("No se pudo iniciar cámara.", 'error'); stopScanner(); }); } }); } else { console.log("Escáner ya activo."); } } else { console.error("No se encontraron cámaras."); showNotification("No hay cámaras.", 'error'); stopScanner(); } }).catch(err => { console.error("Error obteniendo cámaras:", err); showNotification("Error acceso cámaras.", 'error'); stopScanner(); }); }
 function stopScanner() { const SCANNING = 2; const state = (html5QrCode && typeof html5QrCode.getState === 'function') ? html5QrCode.getState() : null; if (state === SCANNING) { html5QrCode.stop().then(ignore => { console.log("Scan stopped."); }).catch(err => { console.error("Fallo al detener:", err); }).finally(() => { const modal = document.getElementById('scanner-modal'); if(modal) modal.classList.add('hidden'); }); } else { const modal = document.getElementById('scanner-modal'); if(modal) modal.classList.add('hidden'); } }
-
-    </script>
-</body>
-</html>
