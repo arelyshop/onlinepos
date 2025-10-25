@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="https://www.svgrepo.com/show/373594/favicon.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- PDF Generation Libraries (kept for quotes/reprint) -->
+    <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <!-- Barcode Scanner Library -->
@@ -73,11 +73,11 @@
             transition: transform 0.5s ease-in-out;
             transform: translateY(-100%);
         }
-        /* Summary Modal Scrollbar */
-        #summary-products-list::-webkit-scrollbar { width: 6px; }
-        #summary-products-list::-webkit-scrollbar-track { background: #e5e7eb; }
-        #summary-products-list::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 3px; }
-        #summary-products-list::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        /* PDF Viewer Modal Styling */
+        #pdf-viewer-modal embed {
+            width: 100%;
+            height: 80vh; /* Adjust height as needed */
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -348,24 +348,13 @@
         </div>
     </div>
 
-    <!-- Sale Summary Modal (Nuevo) -->
-    <div id="sale-summary-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl relative max-h-[90vh] flex flex-col">
-             <button id="close-summary-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-3xl font-bold z-10">&times;</button>
-             <h3 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2" id="summary-modal-title">Resumen de Venta</h3>
-             <div class="text-sm text-gray-700 space-y-2 mb-4">
-                <p><strong>Cliente:</strong> <span id="summary-customer-name"></span></p>
-                <p><strong>Contacto:</strong> <span id="summary-customer-contact"></span> | <strong>NIT/CI:</strong> <span id="summary-customer-id"></span></p>
-                <p><strong>Fecha:</strong> <span id="summary-sale-date"></span></p>
-                <p><strong>Vendido por:</strong> <span id="summary-seller-name" class="font-semibold"></span></p>
-             </div>
-             <h4 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Productos Vendidos</h4>
-             <div id="summary-products-list" class="flex-grow overflow-y-auto border rounded-lg p-3 bg-gray-50 mb-4 max-h-60">
-                 <!-- Product list will be injected here -->
-                 <p class="text-gray-500">Cargando productos...</p>
-             </div>
-             <div class="mt-auto pt-4 border-t text-right">
-                 <p class="text-xl font-bold text-blue-600">Total Venta: Bs <span id="summary-total-amount">0.00</span></p>
+    <!-- PDF Viewer Modal (Nuevo) -->
+    <div id="pdf-viewer-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-4 rounded-lg shadow-xl w-full max-w-4xl relative">
+             <button id="close-pdf-viewer-btn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-3xl font-bold z-10">&times;</button>
+             <h3 class="text-xl font-bold text-gray-800 mb-4" id="pdf-viewer-title">Vista Previa de Venta</h3>
+             <div id="pdf-embed-container">
+                 <p class="text-center text-gray-500 py-10">Cargando PDF...</p>
              </div>
         </div>
     </div>
@@ -385,7 +374,7 @@
         let currentPdfFileName = '';
         let currentUser = null;
         let saleIdToAnnul = null;
-        // let currentPdfViewerUrl = null; // No longer needed for summary
+        let currentPdfViewerUrl = null;
 
         // --- AUTHENTICATION & INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -418,30 +407,36 @@
                 const password = document.getElementById('password').value;
 
                 try {
+                    // Usar fetch normal, NO robustFetch aquí
                     const response = await fetch(`${API_BASE_URL}/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username, password }),
                     });
 
+                    // Parsear respuesta independientemente del status code
                     let result;
                     try {
                         result = await response.json();
                     } catch (jsonError) {
+                         // Si la respuesta no es JSON (ej. error 502 HTML)
                          console.error("Respuesta del login no es JSON:", response.status, response.statusText);
-                         throw new Error(`Error ${response.status}: ${response.statusText || 'Respuesta inválida del servidor'}`);
+                         throw new Error(`Error ${response.status}: ${response.statusText}`);
                     }
+
 
                     if (response.ok && result.status === 'success') {
                         sessionStorage.setItem('arelyShopUser', JSON.stringify(result.user));
                         currentUser = result.user;
                         initializeApp();
                     } else {
+                        // Usar mensaje del backend si existe, si no, mensaje genérico
                         errorMessage.textContent = result.message || 'Credenciales incorrectas o error del servidor.';
                     }
                 } catch (error) {
+                    // Captura errores de red (fetch falló) o errores de parseo/status
                     console.error('Error en el proceso de login:', error);
-                    errorMessage.textContent = error.message.includes('Failed to fetch') || error.message.includes('Load failed') ? 'No se pudo conectar al servidor. Revisa tu conexión.' : error.message;
+                    errorMessage.textContent = 'No se pudo conectar al servidor. Revisa tu conexión o contacta al administrador.';
                 } finally {
                     buttonText.classList.remove('hidden');
                     loader.classList.add('hidden');
@@ -456,22 +451,20 @@
             if (userString) {
                 try {
                     currentUser = JSON.parse(userString);
+                    // Validar si currentUser tiene las propiedades esperadas
                     if (currentUser && currentUser.id && currentUser.username) {
                         initializeApp();
                     } else {
                         console.warn("Datos de usuario en sessionStorage inválidos. Limpiando.");
-                        logout();
+                        logout(); // Limpiar sesión si los datos no son válidos
                     }
                 } catch (e) {
                     console.error("Error parseando datos de usuario desde sessionStorage:", e);
-                    logout();
+                    logout(); // Limpiar sesión si hay error de parseo
                 }
             } else {
-                 // Asegurarse que el panel esté oculto si no hay sesión
-                const appContainer = document.getElementById('app-container');
-                if (appContainer) appContainer.classList.add('hidden');
-                const loginContainer = document.getElementById('login-container');
-                if (loginContainer) loginContainer.classList.remove('hidden'); // Mostrar login
+                document.getElementById('login-container').classList.remove('hidden');
+                document.getElementById('app-container').classList.add('hidden');
             }
         }
 
@@ -483,23 +476,15 @@
             sales = [];
             cart = [];
 
-             // Ocultar app, mostrar login
-             const appContainer = document.getElementById('app-container');
-             if (appContainer) appContainer.classList.add('hidden');
-             const loginContainer = document.getElementById('login-container');
-             if (loginContainer) loginContainer.classList.remove('hidden');
+            document.getElementById('login-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
 
-
-            // Resetear UI (asegurándose que los elementos existen)
-             const cartItemsEl = document.getElementById('cart-items');
-             if(cartItemsEl) cartItemsEl.innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
-             const salesResultsEl = document.getElementById('sales-results-container');
-             if(salesResultsEl) salesResultsEl.innerHTML = '';
-             const customerFormEl = document.getElementById('customer-form');
-             if(customerFormEl) customerFormEl.reset();
-            updateTotal(); // Llama a updateTotal para resetear botones si es necesario
-             // Considerar no recargar si el manejo de estado es robusto
-             // window.location.reload();
+            document.getElementById('cart-items').innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
+            document.getElementById('sales-results-container').innerHTML = '';
+            document.getElementById('customer-form').reset();
+            updateTotal();
+            // Recargar la página para asegurar estado limpio
+            // window.location.reload(); // Descomentar si es necesario
         }
 
         async function initializeApp() {
@@ -513,123 +498,141 @@
             initTabs();
             setupEventListeners();
             updateDateTime();
-            setInterval(updateDateTime, 60000);
+            setInterval(updateDateTime, 60000); // Actualizar fecha cada minuto es suficiente
 
+            // Mostrar "Cargando..." mientras se obtienen los datos
             const salesContainer = document.getElementById('sales-results-container');
             if (salesContainer) salesContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando ventas...</p>';
-            const productSearch = document.getElementById('search-product');
-            if (productSearch) productSearch.disabled = true;
 
 
-            try {
-                await Promise.all([
-                    fetchProducts(),
-                    loadImageAsPngDataUrl('/images/logo-escritorio.svg').then(logo => preloadedLogo = logo),
-                    loadImageAsJpegDataUrl('/images/qr-pdf.webp').then(qr => preloadedPdfQr = qr)
-                ]);
-                await fetchSales();
+            await Promise.all([
+                fetchProducts(), // Carga productos primero
+                loadImageAsPngDataUrl('/images/logo-escritorio.svg').then(logo => preloadedLogo = logo),
+                loadImageAsJpegDataUrl('/images/qr-pdf.webp').then(qr => preloadedPdfQr = qr)
+            ]);
 
-                renderSalesResults();
-                displayNextSaleId();
-            } catch (error) {
-                 console.error("Error durante la inicialización (carga de datos):", error);
-                 showNotification(`Error al cargar datos iniciales: ${error.message}. Intenta recargar.`, 'error');
-            } finally {
-                 if (productSearch) productSearch.disabled = false;
-            }
+             // Cargar ventas DESPUÉS de productos (aunque Promise.all las corre en paralelo)
+            await fetchSales();
+
+
+            renderSalesResults(); // Renderizar ventas después de cargarlas
+            displayNextSaleId();
         }
 
         function updateDateTime() {
             const now = new Date();
             const dateOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
-             const dateEl = document.getElementById('current-date');
-             if (dateEl) dateEl.textContent = now.toLocaleDateString('es-ES', dateOptions);
+            document.getElementById('current-date').textContent = now.toLocaleDateString('es-ES', dateOptions);
         }
 
-        // --- Fetch Simplificado ---
+        // --- ROBUST NETWORKING & UI FUNCTIONS ---
+        // Simplificado: usar fetch normal y manejar errores específicamente
         async function simpleFetch(url, options) {
-            let response;
             try {
-                response = await fetch(url, options);
-                let responseBodyText = null;
+                const response = await fetch(url, options);
+
+                // Intentar obtener el cuerpo de la respuesta para logs/errores
+                let responseBody = null;
                 try {
-                    responseBodyText = await response.text();
+                     // Leer como texto primero para evitar errores si no es JSON
+                    responseBody = await response.text();
                 } catch (bodyError) {
-                    console.warn(`No se pudo leer el cuerpo de la respuesta desde ${url} (status ${response.status}):`, bodyError);
-                     if (response.ok && response.status !== 204) throw new Error("Respuesta exitosa pero cuerpo ilegible.");
-                     if (!response.ok) throw new Error(`Error HTTP ${response.status}: ${response.statusText || 'Sin mensaje'}`);
+                    console.warn(`No se pudo leer el cuerpo de la respuesta desde ${url}:`, bodyError);
                 }
+
+
                 if (!response.ok) {
-                    let errorData = { message: `Error HTTP ${response.status}: ${response.statusText || 'Error desconocido'}` };
-                    if (responseBodyText) {
+                    let errorData = { message: `Error HTTP ${response.status}: ${response.statusText}` };
+                     // Intentar parsear el cuerpo leído como JSON si existe
+                    if(responseBody) {
                         try {
-                            const parsedBody = JSON.parse(responseBodyText);
+                            const parsedBody = JSON.parse(responseBody);
+                            // Usar mensaje del backend si está disponible
                             errorData.message = parsedBody.message || parsedBody.error || errorData.message;
-                            errorData.details = parsedBody.details;
-                        } catch (parseError) { if (responseBodyText.trim().length > 0) errorData.message = responseBodyText; }
+                            errorData.details = parsedBody.details; // Añadir detalles si existen
+                        } catch (parseError) {
+                            // Si no es JSON, usar el texto directamente (si no está vacío)
+                            if (responseBody.trim().length > 0) {
+                                errorData.message = responseBody;
+                            }
+                        }
                     }
                     console.error(`Error en fetch a ${url}:`, errorData);
-                    throw new Error(errorData.message);
+                    throw new Error(errorData.message); // Lanzar error con mensaje descriptivo
                 }
-                if (response.status === 204) return { status: 'success', message: 'Operación exitosa sin contenido.' };
-                try {
-                    const jsonData = responseBodyText ? JSON.parse(responseBodyText) : await response.json();
-                    if (typeof jsonData === 'object' && jsonData !== null) return jsonData;
-                    else throw new Error("Formato de respuesta JSON inesperado.");
-                } catch (jsonError) {
-                     console.error(`Respuesta OK pero no es JSON válido desde ${url}:`, jsonError, responseBodyText);
-                     throw new Error("Respuesta inválida del servidor (no es JSON).");
-                }
-            } catch (networkOrProcessingError) {
-                console.error(`Error durante fetch a ${url}:`, networkOrProcessingError);
-                throw new Error(networkOrProcessingError.message || 'Error de conexión con el servidor.');
+
+                 // Si la respuesta es OK, intentar parsear como JSON
+                 try {
+                     // Si responseBody ya se leyó, usarlo, si no, leer .json()
+                     const jsonData = responseBody ? JSON.parse(responseBody) : await response.json();
+                     return jsonData; // Devolver los datos parseados
+                 } catch (jsonError) {
+                      // Podría ser una respuesta OK pero sin cuerpo JSON (ej. 204 No Content)
+                      if (response.status === 204) {
+                           return { status: 'success', message: 'Operación exitosa sin contenido.' }; // Devolver objeto éxito
+                      }
+                      console.error(`Respuesta OK pero no es JSON válido desde ${url}:`, jsonError, responseBody);
+                      throw new Error("Respuesta inesperada del servidor (no es JSON).");
+                 }
+
+            } catch (networkError) {
+                 // Captura errores de red (fetch falló) o errores lanzados arriba
+                console.error(`Error de red o procesamiento en fetch a ${url}:`, networkError);
+                // Lanzar un error consistente para ser capturado por el código que llama
+                throw new Error(networkError.message || 'Error de conexión con el servidor.');
             }
         }
 
-        // --- UI Functions ---
+
         function showNotification(message, type) {
             const banner = document.getElementById('notification-banner');
             const messageSpan = document.getElementById('notification-message');
-             if (!banner || !messageSpan) {
-                  console.warn("Elementos de notificación no encontrados. Mensaje:", message);
-                  return;
-             }
             messageSpan.textContent = message;
-            banner.className = 'fixed top-0 left-0 right-0 p-4 text-white text-center z-50 transition-transform duration-500 ease-in-out transform -translate-y-full';
-            void banner.offsetWidth;
+            banner.className = 'fixed top-0 left-0 right-0 p-4 text-white text-center z-50';
             banner.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600');
             banner.style.transform = 'translateY(0)';
-
-            clearTimeout(banner.timeoutId);
+            clearTimeout(banner.timeoutId); // Limpiar timeout anterior si existe
             banner.timeoutId = setTimeout(() => {
                 banner.style.transform = 'translateY(-100%)';
             }, 4000);
         }
 
         const loadImageAsPngDataUrl = (url) => new Promise((resolve) => {
-             if (!url) { resolve(null); return; }
+             if (!url) { resolve(null); return; } // Manejar URL nula
             const img = new Image();
             img.crossOrigin = 'Anonymous';
             img.onload = () => {
-                const canvas = document.createElement('canvas'); canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth; // Usar naturalWidth/Height
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
                 resolve({dataURL: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight});
             };
-            img.onerror = (e) => { console.error("Error cargando imagen PNG:", url, e); resolve(null); }
-             img.src = url.startsWith('data:') ? url : (url + (url.includes('?') ? '&' : '?') + Date.now());
+            img.onerror = (e) => {
+                 console.error("Error cargando imagen PNG:", url, e);
+                 resolve(null); // Resolver a null en caso de error
+            }
+            img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
         });
 
         const loadImageAsJpegDataUrl = (url) => new Promise((resolve) => {
-             if (!url) { resolve(null); return; }
+             if (!url) { resolve(null); return; } // Manejar URL nula
             const img = new Image();
             img.crossOrigin = 'Anonymous';
             img.onload = () => {
-                const canvas = document.createElement('canvas'); canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-                const ctx = canvas.getContext('2d'); ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0);
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
                 resolve({dataURL: canvas.toDataURL('image/jpeg', 0.8), width: img.naturalWidth, height: img.naturalHeight});
             };
-            img.onerror = (e) => { console.error("Error cargando imagen JPEG:", url, e); resolve(null); }
-             img.src = url.startsWith('data:') ? url : (url + (url.includes('?') ? '&' : '?') + Date.now());
+            img.onerror = (e) => {
+                 console.error("Error cargando imagen JPEG:", url, e);
+                 resolve(null);
+            }
+             img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
         });
 
         function initTabs() {
@@ -637,179 +640,736 @@
                 pos: { btn: document.getElementById('tab-pos'), content: document.getElementById('content-pos') },
                 salesRegistry: { btn: document.getElementById('tab-sales-registry'), content: document.getElementById('content-sales-registry') }
             };
+
             Object.keys(tabs).forEach(key => {
+                 // Asegurarse de que el botón existe antes de añadir listener
                  if(tabs[key].btn) {
                     tabs[key].btn.addEventListener('click', () => {
                         Object.values(tabs).forEach(t => {
-                            if(t.btn) t.btn.classList.remove('tab-active', 'tab-inactive'); // Limpiar ambas
-                            if(t.btn) t.btn.classList.add('tab-inactive'); // Poner inactivo por defecto
+                            if(t.btn) t.btn.classList.remove('tab-active');
+                            if(t.btn) t.btn.classList.add('tab-inactive');
                             if(t.content) t.content.style.display = 'none';
                         });
-                        tabs[key].btn.classList.remove('tab-inactive'); // Quitar inactivo
-                        tabs[key].btn.classList.add('tab-active'); // Poner activo
+                        tabs[key].btn.classList.add('tab-active');
+                        tabs[key].btn.classList.remove('tab-inactive');
                         if(tabs[key].content) tabs[key].content.style.display = 'block';
                         if (key === 'salesRegistry') renderSalesResults();
                     });
                  }
             });
+             // Activar tab POS por defecto
              if(tabs.pos.btn) tabs.pos.btn.classList.add('tab-active');
              if(tabs.pos.btn) tabs.pos.btn.classList.remove('tab-inactive');
              if(tabs.pos.content) tabs.pos.content.style.display = 'block';
              if(tabs.salesRegistry.content) tabs.salesRegistry.content.style.display = 'none';
         }
 
-
         function setupEventListeners() {
-            // --- General ---
-             const logoutBtn = document.getElementById('logout-button');
-             if(logoutBtn) logoutBtn.addEventListener('click', logout); // Mover aquí para asegurar que exista
-
-            // --- POS Tab ---
             const searchInput = document.getElementById('search-product');
-            if (searchInput) { searchInput.addEventListener('input', handleSearch); searchInput.addEventListener('keydown', handleBarcodeScan); }
-            const completeSaleBtn = document.getElementById('complete-sale-button');
-            if(completeSaleBtn) completeSaleBtn.addEventListener('click', completeSale);
-            const generateQuoteBtn = document.getElementById('generate-quote-button');
-            if(generateQuoteBtn) generateQuoteBtn.addEventListener('click', handleGenerateQuote);
-            const cartItemsEl = document.getElementById('cart-items');
-            if(cartItemsEl) {
-                cartItemsEl.addEventListener('click', (e) => {
-                    const infoButton = e.target.closest('.info-btn');
-                    if (infoButton) {
-                        const cartIndex = infoButton.dataset.cartIndex;
-                        if (cartIndex !== undefined && cart[parseInt(cartIndex)]) { showProductModal(cart[parseInt(cartIndex)]); }
-                    }
-                });
+            if (searchInput) {
+                 searchInput.addEventListener('input', handleSearch);
+                 searchInput.addEventListener('keydown', handleBarcodeScan);
             }
-            const scanPosBtn = document.getElementById('scan-pos-btn');
-            if(scanPosBtn) scanPosBtn.addEventListener('click', () => startScanner('search-product'));
-
-            // --- Sales Registry Tab ---
             const searchSalesInput = document.getElementById('search-sales-input');
             if(searchSalesInput) searchSalesInput.addEventListener('input', renderSalesResults);
-            const salesResultsContainer = document.getElementById('sales-results-container');
-            if(salesResultsContainer) {
-                salesResultsContainer.addEventListener('click', (event) => {
-                    // Delegación para Ver Resumen, Reimprimir, Anular
-                    const summaryBtn = event.target.closest('.view-summary-btn'); // Cambiado de view-pdf-btn
-                    const reprintBtn = event.target.closest('.reprint-btn'); // Añadir clase si no existe
-                    const annulBtn = event.target.closest('.annul-btn');     // Añadir clase si no existe
 
-                    const saleId = summaryBtn?.dataset.saleid || reprintBtn?.dataset.saleid || annulBtn?.dataset.saleid;
+            const completeSaleBtn = document.getElementById('complete-sale-button');
+            if(completeSaleBtn) completeSaleBtn.addEventListener('click', completeSale);
 
-                    if (summaryBtn && saleId) { showSaleSummaryModal(saleId); } // Llama a la nueva función de resumen
-                    else if (reprintBtn && saleId) { reprintSale(saleId); }
-                    else if (annulBtn && saleId) { openAnnulConfirmModal(saleId); }
-                });
-            }
+            const generateQuoteBtn = document.getElementById('generate-quote-button');
+            if(generateQuoteBtn) generateQuoteBtn.addEventListener('click', handleGenerateQuote);
 
-            // --- Modals ---
             const closeProductModalBtn = document.getElementById('closeProductModal');
-            if(closeProductModalBtn) closeProductModalBtn.addEventListener('click', () => { document.getElementById('productDetailModal')?.classList.add('hidden'); });
-            const closeQrModalBtn = document.getElementById('closeQrModal');
-            if(closeQrModalBtn) closeQrModalBtn.addEventListener('click', () => { document.getElementById('qrCodeModal')?.classList.add('hidden'); });
-            const closeScannerBtn = document.getElementById('close-scanner-btn');
-            if(closeScannerBtn) closeScannerBtn.addEventListener('click', stopScanner);
-            const cancelAnnulBtn = document.getElementById('cancel-annul-btn');
-             if(cancelAnnulBtn) cancelAnnulBtn.addEventListener('click', () => { document.getElementById('annul-confirm-modal')?.classList.add('hidden'); saleIdToAnnul = null; });
-            const confirmAnnulBtn = document.getElementById('confirm-annul-btn');
-             if(confirmAnnulBtn) confirmAnnulBtn.addEventListener('click', () => { if (saleIdToAnnul) { annulSaleInBackend(saleIdToAnnul); } });
-             const closeSummaryModalBtn = document.getElementById('close-summary-modal-btn'); // Nuevo botón de cierre para resumen
-             if (closeSummaryModalBtn) closeSummaryModalBtn.addEventListener('click', closeSaleSummaryModal);
+            if(closeProductModalBtn) closeProductModalBtn.addEventListener('click', () => {
+                 const modal = document.getElementById('productDetailModal');
+                 if(modal) modal.classList.add('hidden');
+            });
 
-
-            // --- Copy Buttons ---
              const copyBtns = document.querySelectorAll('.copy-btn');
              copyBtns.forEach(button => {
                 button.addEventListener('click', (e) => {
                     const targetId = e.currentTarget.dataset.copyTarget;
                     const targetElement = document.getElementById(targetId);
                     const textToCopy = targetElement?.textContent || '';
-                    if (textToCopy) { copyToClipboard(textToCopy, e.currentTarget); }
+                    if (textToCopy) {
+                         copyToClipboard(textToCopy, e.currentTarget);
+                    }
                 });
             });
-        }
 
+
+            const cartItemsEl = document.getElementById('cart-items');
+            if(cartItemsEl) {
+                cartItemsEl.addEventListener('click', (e) => {
+                    const infoButton = e.target.closest('.info-btn');
+                    if (infoButton) {
+                        const cartIndex = infoButton.dataset.cartIndex;
+                        if (cartIndex !== undefined && cart[parseInt(cartIndex)]) {
+                            showProductModal(cart[parseInt(cartIndex)]);
+                        }
+                    }
+                });
+            }
+
+            const closeQrModalBtn = document.getElementById('closeQrModal');
+            if(closeQrModalBtn) closeQrModalBtn.addEventListener('click', () => {
+                const modal = document.getElementById('qrCodeModal');
+                if(modal) modal.classList.add('hidden');
+            });
+
+            const scanPosBtn = document.getElementById('scan-pos-btn');
+            if(scanPosBtn) scanPosBtn.addEventListener('click', () => startScanner('search-product'));
+
+            const closeScannerBtn = document.getElementById('close-scanner-btn');
+            if(closeScannerBtn) closeScannerBtn.addEventListener('click', stopScanner);
+
+            const cancelAnnulBtn = document.getElementById('cancel-annul-btn');
+             if(cancelAnnulBtn) cancelAnnulBtn.addEventListener('click', () => {
+                const modal = document.getElementById('annul-confirm-modal');
+                if(modal) modal.classList.add('hidden');
+                saleIdToAnnul = null;
+            });
+
+             const confirmAnnulBtn = document.getElementById('confirm-annul-btn');
+             if(confirmAnnulBtn) confirmAnnulBtn.addEventListener('click', () => {
+                if (saleIdToAnnul) {
+                    annulSaleInBackend(saleIdToAnnul);
+                }
+            });
+
+            const salesResultsContainer = document.getElementById('sales-results-container');
+            if(salesResultsContainer) {
+                salesResultsContainer.addEventListener('click', (event) => {
+                    const viewPdfButton = event.target.closest('.view-pdf-btn');
+                    if (viewPdfButton) {
+                        const saleId = viewPdfButton.dataset.saleid;
+                        if (saleId) {
+                            showPdfModal(saleId);
+                        }
+                    }
+                });
+            }
+
+            const closePdfViewerBtn = document.getElementById('close-pdf-viewer-btn');
+            if(closePdfViewerBtn) closePdfViewerBtn.addEventListener('click', closePdfModal);
+        }
 
         // --- DATA MAPPING ---
         const mapProductToFrontend = (p) => {
-             if (!p || typeof p !== 'object') { return null; }
+             // Validar que p es un objeto antes de mapear
+             if (!p || typeof p !== 'object') {
+                  console.warn("Intento de mapear un producto inválido:", p);
+                  return null; // Devolver null para filtrar después
+             }
              return {
-                id: p.id, nombre: p.name, sku: p.sku, precioVenta: p.sale_price, precioDescuento: p.discount_price,
-                precioCompra: p.purchase_price, precioMayoreo: p.wholesale_price, cantidad: p.stock,
-                codigoBarras: p.barcode, ciudadSucursal: p.ciudad_sucursal, urlFoto1: p.photo_url_1
+                id: p.id,
+                nombre: p.name,
+                sku: p.sku,
+                precioVenta: p.sale_price,
+                precioDescuento: p.discount_price,
+                precioCompra: p.purchase_price,
+                precioMayoreo: p.wholesale_price,
+                cantidad: p.stock,
+                codigoBarras: p.barcode,
+                ciudadSucursal: p.ciudad_sucursal,
+                urlFoto1: p.photo_url_1
             };
         };
 
 
         async function fetchProducts() {
             try {
-                const result = await simpleFetch(`${API_BASE_URL}/products`);
+                const result = await simpleFetch(`${API_BASE_URL}/products`); // Usar simpleFetch
+                // Filtrar resultados nulos del mapeo si hubo datos inválidos
                  products = (result.status === 'success' && Array.isArray(result.data))
-                     ? result.data.map(mapProductToFrontend).filter(p => p !== null) : [];
-                 if (result.status !== 'success') throw new Error(result.message || 'Error desconocido al obtener productos');
+                     ? result.data.map(mapProductToFrontend).filter(p => p !== null)
+                     : [];
+                 if (result.status !== 'success') {
+                      throw new Error(result.message || 'Error desconocido al obtener productos');
+                 }
             } catch (error) {
                 console.error("Fallo al cargar productos:", error);
-                showNotification(`No se pudieron cargar los productos: ${error.message}`, 'error'); products = [];
+                showNotification(`No se pudieron cargar los productos: ${error.message}`, 'error');
+                products = [];
             }
         }
 
         async function fetchSales() {
             try {
-                const result = await simpleFetch(`${API_BASE_URL}/sales`);
+                const result = await simpleFetch(`${API_BASE_URL}/sales`); // Usar simpleFetch
                 if (result.status === 'success' && Array.isArray(result.data)) {
                     sales = result.data.sort((a, b) => new Date(b.fechaVenta) - new Date(a.fechaVenta));
                 } else {
-                     sales = []; if (result.status !== 'success') console.warn("La respuesta de fetchSales no fue exitosa:", result);
+                     sales = [];
+                     if (result.status !== 'success') console.warn("La respuesta de fetchSales no fue exitosa:", result);
                 }
             } catch (error) {
                 console.error("Fallo al cargar las ventas:", error);
-                showNotification(`No se pudieron cargar las ventas: ${error.message}`, 'error'); sales = [];
+                showNotification(`No se pudieron cargar las ventas: ${error.message}`, 'error');
+                sales = [];
             }
         }
 
 
         function displayNextSaleId() {
             let nextId = "AS1";
-            if (sales.length > 0 && sales[0].saleId) {
-                 const lastSaleId = sales[0].saleId; const lastIdNumber = parseInt(lastSaleId.substring(2));
-                if (!isNaN(lastIdNumber)) nextId = 'AS' + (lastIdNumber + 1);
-                else console.warn("El último saleId no tiene formato numérico:", lastSaleId);
+            if (sales.length > 0 && sales[0].saleId) { // Añadir verificación de saleId
+                 const lastSaleId = sales[0].saleId;
+                 const lastIdNumber = parseInt(lastSaleId.substring(2));
+
+                if (!isNaN(lastIdNumber)) {
+                    nextId = 'AS' + (lastIdNumber + 1);
+                } else {
+                     console.warn("El último saleId no tiene formato numérico esperado:", lastSaleId);
+                     // Podrías intentar buscar el máximo número en todos los IDs como fallback
+                }
             }
             const saleIdElement = document.getElementById('current-sale-id');
             if(saleIdElement) saleIdElement.textContent = nextId;
         }
 
 
-        function handleBarcodeScan(e) { /* ... (sin cambios) ... */ }
-        function handleSearch(e) { /* ... (sin cambios) ... */ }
-        function addToCart(product) { /* ... (sin cambios, asegurar que copia 'id') ... */ }
-        function renderCart() { /* ... (sin cambios) ... */ }
-        function updateItemPrice(index, newPrice) { /* ... (sin cambios) ... */ }
-        function setQuantity(index, newQuantity) { /* ... (sin cambios) ... */ }
-        function removeFromCart(index) { /* ... (sin cambios) ... */ }
-        function updateTotal() { /* ... (sin cambios) ... */ }
-        async function completeSale() { /* ... (sin cambios) ... */ }
-        function generateSalePDF(saleId, saleData) { /* ... (sin cambios) ... */ }
-        function handleGenerateQuote() { /* ... (sin cambios) ... */ }
-        function generateQuotePDF(quoteData) { /* ... (sin cambios) ... */ }
-        function generateDocumentPDF(docType, docIdentifier, data, filePrefix = 'Nota_Venta') { /* ... (sin cambios) ... */ }
+        function handleBarcodeScan(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const barcode = e.target.value.trim();
+                if (barcode === '') return;
+                const foundProduct = products.find(p => p.codigoBarras?.toString() === barcode);
+                if (foundProduct) {
+                    addToCart(foundProduct);
+                    e.target.value = '';
+                } else {
+                    showNotification('Producto no encontrado con ese código de barras.', 'error');
+                }
+            }
+        }
+
+        function handleSearch(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const resultsContainer = document.getElementById('search-results');
+            if (!resultsContainer) return; // Salir si no existe el contenedor
+
+            if (searchTerm.length < 2) {
+                resultsContainer.innerHTML = '';
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+            // Asegurarse de que products es un array antes de filtrar
+             const filteredProducts = Array.isArray(products) ? products.filter(p =>
+                p?.nombre?.toLowerCase().includes(searchTerm) || // Usar optional chaining
+                p?.sku?.toString().toLowerCase().includes(searchTerm)
+            ) : [];
+
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.innerHTML = '';
+            if (filteredProducts.length > 0) {
+                filteredProducts.forEach(p => {
+                     // Doble verificación por si acaso
+                     if (!p) return;
+                    const div = document.createElement('div');
+                    div.className = 'p-3 hover:bg-gray-100 cursor-pointer';
+                    const displayPrice = (p.precioDescuento && parseFloat(p.precioDescuento) > 0)
+                                        ? parseFloat(p.precioDescuento).toFixed(2)
+                                        : parseFloat(p.precioVenta || 0).toFixed(2); // Añadir || 0
+                    const stock = p.cantidad ?? 0; // Usar ?? para manejar null/undefined
+                    div.textContent = `${p.nombre} (Bs ${displayPrice}) - Stock: ${stock}`;
+                    div.onclick = () => addToCart(p);
+                    resultsContainer.appendChild(div);
+                });
+            } else {
+                resultsContainer.innerHTML = '<div class="p-3 text-gray-500">No se encontraron productos</div>';
+            }
+        }
+
+
+        function addToCart(product) {
+            // Validar producto
+            if (!product || !product.id) {
+                 console.error("Intento de añadir producto inválido al carrito:", product);
+                 return;
+            }
+
+            const latestProductInfo = products.find(p => p.id === product.id);
+
+            if (!latestProductInfo || latestProductInfo.cantidad <= 0) {
+                showNotification('Este producto no tiene stock disponible.', 'error');
+                const searchInput = document.getElementById('search-product');
+                if(searchInput) searchInput.value = '';
+                const searchResults = document.getElementById('search-results');
+                if(searchResults) searchResults.classList.add('hidden');
+                return;
+            }
+
+            const existingCartItem = cart.find(item => item.id === product.id);
+
+            if (existingCartItem) {
+                if (existingCartItem.quantity < latestProductInfo.cantidad) {
+                    existingCartItem.quantity++;
+                } else {
+                    showNotification(`No se puede añadir más. Stock máximo: ${latestProductInfo.cantidad}`, 'error');
+                }
+            } else {
+                const defaultPrice = (latestProductInfo.precioDescuento && parseFloat(latestProductInfo.precioDescuento) > 0)
+                               ? parseFloat(latestProductInfo.precioDescuento)
+                               : parseFloat(latestProductInfo.precioVenta || 0); // Añadir || 0
+                // Copiar solo las propiedades necesarias, NO todo el objeto
+                cart.push({
+                     id: latestProductInfo.id,
+                     nombre: latestProductInfo.nombre,
+                     sku: latestProductInfo.sku,
+                     precioVenta: latestProductInfo.precioVenta,
+                     precioDescuento: latestProductInfo.precioDescuento,
+                     precioCompra: latestProductInfo.precioCompra,
+                     precioMayoreo: latestProductInfo.precioMayoreo,
+                     codigoBarras: latestProductInfo.codigoBarras,
+                     ciudadSucursal: latestProductInfo.ciudadSucursal,
+                     urlFoto1: latestProductInfo.urlFoto1,
+                     // Cantidad y precio custom sí son específicos del carrito
+                     quantity: 1,
+                     customPrice: defaultPrice
+                 });
+            }
+
+            const searchInput = document.getElementById('search-product');
+            if(searchInput) searchInput.value = '';
+            const searchResults = document.getElementById('search-results');
+            if(searchResults) searchResults.classList.add('hidden');
+            renderCart();
+        }
+
+
+        function renderCart() {
+            const cartItemsContainer = document.getElementById('cart-items');
+             if (!cartItemsContainer) return; // Salir si no existe
+
+            cartItemsContainer.innerHTML = '';
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
+            } else {
+                cart.forEach((item, index) => {
+                     // Validar item antes de usarlo
+                     if (!item || typeof item !== 'object') {
+                          console.warn("Item inválido en el carrito:", item);
+                          return; // Saltar este item
+                     }
+                     const currentProductInfo = products.find(p => p && p.id === item.id); // Añadir p &&
+                     const currentStock = currentProductInfo ? (currentProductInfo.cantidad ?? 0) : 0; // Usar ??
+
+                    // Validar precios antes de calcular
+                    const quantity = item.quantity ?? 0;
+                    const customPrice = item.customPrice ?? 0;
+                    const subtotal = quantity * customPrice;
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-2 py-3 text-center align-middle">
+                            <button class="info-btn text-gray-400 hover:text-blue-600" data-cart-index="${index}">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-280h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+                            </button>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-800 align-middle">${item.nombre || 'Producto Desconocido'}</td>
+                        <td class="px-4 py-3 text-sm align-middle"><input type="number" step="0.01" value="${customPrice.toFixed(2)}" onchange="updateItemPrice(${index}, this.value)" class="w-24 text-center border rounded-lg py-1"></td>
+                        <td class="px-4 py-3 text-sm text-center align-middle"><input type="number" min="0" max="${currentStock}" value="${quantity}" onchange="setQuantity(${index}, this.value)" class="w-20 text-center border rounded-lg py-1"></td>
+                        <td class="px-4 py-3 text-sm text-right font-medium align-middle">Bs ${subtotal.toFixed(2)}</td>
+                        <td class="px-2 py-3 text-center align-middle"><button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 font-bold text-xl">&times;</button></td>
+                    `;
+                    cartItemsContainer.appendChild(row);
+                });
+            }
+            updateTotal();
+        }
+
+
+        function updateItemPrice(index, newPrice) {
+            if (index >= 0 && index < cart.length) {
+                 const price = parseFloat(newPrice);
+                 if (!isNaN(price) && price >= 0) {
+                     cart[index].customPrice = price;
+                 } else {
+                      // Opcional: resetear al precio original si la entrada es inválida
+                      const productInfo = products.find(p => p && p.id === cart[index].id);
+                      cart[index].customPrice = (productInfo?.precioDescuento && parseFloat(productInfo.precioDescuento) > 0)
+                                               ? parseFloat(productInfo.precioDescuento)
+                                               : parseFloat(productInfo?.precioVenta || 0);
+                 }
+                 renderCart();
+            }
+        }
+
+
+        function setQuantity(index, newQuantity) {
+             if (index < 0 || index >= cart.length) return;
+
+            const cartItem = cart[index];
+             // Asegurarse de que cartItem exista
+             if (!cartItem) return;
+
+            const productInStock = products.find(p => p && p.id === cartItem.id);
+            const maxStock = productInStock ? (productInStock.cantidad ?? 0) : 0;
+
+            let quantity = parseInt(newQuantity);
+
+            if (isNaN(quantity) || quantity < 0) {
+                quantity = 0;
+            }
+
+            if (quantity > maxStock) {
+                showNotification(`Stock insuficiente. Máximo disponible: ${maxStock}`, 'error');
+                quantity = maxStock;
+            }
+
+            if (quantity === 0) {
+                 cart.splice(index, 1);
+            } else {
+                 // Asegurarse de que cart[index] todavía exista antes de asignar
+                 if(cart[index]) {
+                     cart[index].quantity = quantity;
+                 }
+            }
+
+            renderCart();
+        }
+
+        function removeFromCart(index) {
+            if (index >= 0 && index < cart.length) {
+                cart.splice(index, 1);
+                renderCart();
+            }
+        }
+
+        function updateTotal() {
+            const total = cart.reduce((sum, item) => {
+                 // Validar item en reduce
+                 const quantity = item?.quantity ?? 0;
+                 const price = item?.customPrice ?? 0;
+                 return sum + (quantity * price);
+            }, 0);
+             const totalAmountEl = document.getElementById('total-amount');
+             if(totalAmountEl) totalAmountEl.textContent = `Bs ${total.toFixed(2)}`;
+
+            const isEmpty = cart.length === 0;
+             const completeBtn = document.getElementById('complete-sale-button');
+             if(completeBtn) completeBtn.disabled = isEmpty;
+             const quoteBtn = document.getElementById('generate-quote-button');
+             if(quoteBtn) quoteBtn.disabled = isEmpty;
+        }
+
+
+        async function completeSale() {
+            if (cart.length === 0) return;
+            if (!currentUser || !currentUser.id) {
+                showNotification("Error: Sesión inválida. Por favor, inicia sesión de nuevo.", "error");
+                logout();
+                return;
+            }
+
+            const button = document.getElementById('complete-sale-button');
+            const buttonText = document.getElementById('sale-button-text');
+            const loader = document.getElementById('sale-loader');
+             // Verificar si existen antes de usarlos
+             if (!button || !buttonText || !loader) {
+                  console.error("Elementos del botón de venta no encontrados.");
+                  return;
+             }
+
+            buttonText.classList.add('hidden');
+            loader.classList.remove('hidden');
+            button.disabled = true;
+
+            const saleIdEl = document.getElementById('current-sale-id');
+            const saleId = saleIdEl ? saleIdEl.textContent : `AS_ERR_${Date.now()}`; // Fallback ID
+
+            const saleData = {
+                saleId: saleId,
+                customer: {
+                    name: document.getElementById('customer-name')?.value || '', // Usar || '' como fallback
+                    contact: document.getElementById('customer-contact')?.value || '',
+                    id: document.getElementById('customer-id')?.value || ''
+                },
+                 items: cart.map(item => ({
+                    productId: item.id,
+                    Nombre: item.nombre,
+                    SKU: item.sku,
+                    cantidad: item.quantity,
+                    precio: item.customPrice,
+                    'Precio (Compra)': item.precioCompra
+                })).filter(item => item.productId && item.cantidad > 0), // Filtrar items inválidos
+                total: cart.reduce((sum, item) => sum + ((item?.quantity ?? 0) * (item?.customPrice ?? 0)), 0),
+                user: {
+                    id: currentUser.id,
+                    fullName: currentUser.full_name
+                }
+            };
+             // Validar que items no esté vacío después de filtrar
+             if (saleData.items.length === 0) {
+                 showNotification("Error: No hay productos válidos en el carrito.", "error");
+                 buttonText.classList.remove('hidden');
+                 loader.classList.add('hidden');
+                 button.disabled = false; // Re-habilitar si el carrito estaba vacío o inválido
+                 return;
+             }
+
+
+            try {
+                 // Usar simpleFetch
+                const result = await simpleFetch(`${API_BASE_URL}/sales`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(saleData)
+                });
+
+                if (result.status === 'success' && result.data?.saleId) {
+                    const { pdfBlob, fileName } = generateSalePDF(result.data.saleId, saleData);
+                    showShareOptions(pdfBlob, fileName, 'Venta Completada', 'Venta guardada y PDF generado. ¿Qué deseas hacer?');
+
+                    // Importante: Esperar a que se actualicen los datos locales
+                    await Promise.all([fetchProducts(), fetchSales()]);
+
+                    // Limpiar UI después de actualizar datos
+                    cart = [];
+                    renderCart();
+                     const customerForm = document.getElementById('customer-form');
+                     if(customerForm) customerForm.reset();
+                    renderSalesResults();
+                    displayNextSaleId();
+
+                } else {
+                     // Si el status no es success o falta data.saleId
+                     throw new Error(result.message || 'Error desconocido del servidor al guardar la venta.');
+                }
+            } catch (error) {
+                console.error('Error al registrar la venta:', error);
+                showNotification(`Error al registrar la venta: ${error.message}`, 'error');
+                 // Si el error fue por stock, recargar productos y renderizar carrito
+                 if (error.message && error.message.toLowerCase().includes('stock insuficiente')) {
+                    await fetchProducts();
+                    renderCart();
+                }
+            } finally {
+                buttonText.classList.remove('hidden');
+                loader.classList.add('hidden');
+                // Re-habilitar botón solo si el carrito NO está vacío
+                button.disabled = cart.length === 0;
+            }
+        }
+
+
+        function generateSalePDF(saleId, saleData) {
+            const validSaleData = { ...saleData, items: Array.isArray(saleData.items) ? saleData.items : [] };
+            return generateDocumentPDF('Nota de Venta', `Nr: ${saleId}`, validSaleData);
+        }
+
+        function handleGenerateQuote() {
+            if (cart.length === 0) {
+                showNotification("El carrito está vacío. Añade productos para cotizar.", 'error');
+                return;
+            }
+
+            const quoteData = {
+                customer: {
+                    name: document.getElementById('customer-name')?.value || '',
+                    contact: document.getElementById('customer-contact')?.value || '',
+                    id: document.getElementById('customer-id')?.value || ''
+                },
+                items: cart.map(item => ({
+                    Nombre: item?.nombre || '', // Añadir fallbacks
+                    SKU: item?.sku || '',
+                    cantidad: item?.quantity ?? 0,
+                    precio: item?.customPrice ?? 0
+                })).filter(item => item.cantidad > 0), // Filtrar items con cantidad 0
+                total: cart.reduce((sum, item) => sum + ((item?.quantity ?? 0) * (item?.customPrice ?? 0)), 0)
+            };
+
+            // Validar que items no esté vacío
+             if (quoteData.items.length === 0) {
+                 showNotification("Error: No hay productos válidos en el carrito para cotizar.", "error");
+                 return;
+             }
+
+            const { pdfBlob, fileName } = generateQuotePDF(quoteData);
+            showShareOptions(pdfBlob, fileName, 'Cotización Generada', 'El PDF de la cotización ha sido generado. ¿Qué deseas hacer?');
+        }
+
+
+        function generateQuotePDF(quoteData) {
+             const validQuoteData = { ...quoteData, items: Array.isArray(quoteData.items) ? quoteData.items : [] };
+            return generateDocumentPDF('Cotización', 'Válido por 24hrs.', validQuoteData, 'Cotizacion');
+        }
+
+        function generateDocumentPDF(docType, docIdentifier, data, filePrefix = 'Nota_Venta') {
+             // Validar datos de entrada básicos
+             if (!data || typeof data !== 'object') {
+                  console.error("generateDocumentPDF: Datos inválidos recibidos", data);
+                  // Podrías devolver un objeto de error o lanzar una excepción
+                  return { pdfBlob: null, fileName: 'error.pdf' };
+             }
+             // Asegurar que data.customer exista
+             data.customer = data.customer || {};
+
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const pageW = doc.internal.pageSize.getWidth();
+            const margin = 14;
+            const headerW = pageW - (margin * 2);
+            const headerH = 30;
+            const r = 3;
+
+            doc.setFillColor('#303c54');
+            doc.roundedRect(margin, margin, headerW, headerH, r, r, 'F');
+            doc.setTextColor('#FFFFFF');
+
+            let textStartX = margin + 5;
+            if (preloadedLogo && preloadedLogo.dataURL) { // Verificar dataURL
+                const logoH = 7.2;
+                const logoW = (preloadedLogo.width / preloadedLogo.height) * logoH;
+                const logoY = margin + (headerH - logoH) / 2;
+                try {
+                    doc.addImage(preloadedLogo.dataURL, 'PNG', margin + 5, logoY, logoW, logoH, undefined, 'FAST');
+                    textStartX = margin + logoW + 8;
+                } catch (e) {
+                    console.error("Error adding logo image to PDF:", e);
+                }
+            }
+
+
+            doc.setFontSize(17.6);
+            doc.text("ArelyShop", textStartX, margin + 15);
+            doc.setFontSize(8.8);
+            doc.text("Santa Cruz de la Sierra, Bolivia", textStartX, margin + 21);
+
+            doc.setFontSize(16);
+            doc.text(docType, pageW - margin - 5, margin + 12, { align: 'right' });
+            doc.setFontSize(10);
+            doc.text(docIdentifier, pageW - margin - 5, margin + 18, { align: 'right' });
+            doc.text(`Fecha: ${new Date().toLocaleDateString('es-BO')}`, pageW - margin - 5, margin + 24, { align: 'right' });
+
+            const startY = margin + headerH + 10;
+            doc.setTextColor('#000000');
+            doc.setFontSize(12);
+            doc.text("Datos del Cliente:", margin, startY);
+            doc.setFontSize(10);
+
+            const customerInfo = `Nombre: ${data.customer.name || 'N/A'}   |   Contacto: ${data.customer.contact || 'N/A'}   |   NIT/CI: ${data.customer.id || 'N/A'}`;
+            doc.text(customerInfo, margin, startY + 8);
+
+            const tableColumn = ["Cant.", "Descripción", "P. Unit.", "Subtotal"];
+            const tableRows = [];
+            if (Array.isArray(data.items)) {
+                data.items.forEach(item => {
+                     // Validar item antes de usarlo
+                     if (!item || typeof item !== 'object') return;
+
+                    const price = typeof item.precio === 'number' ? item.precio : 0;
+                    const quantity = typeof item.cantidad === 'number' ? item.cantidad : 0;
+                    const subtotal = quantity * price;
+
+                    const description = `${item.Nombre || 'N/A'}\n(SKU: ${item.SKU || 'N/A'})`; // Añadir N/A fallbacks
+                    const itemData = [ quantity, description, `Bs ${price.toFixed(2)}`, `Bs ${subtotal.toFixed(2)}` ];
+                    tableRows.push(itemData);
+                });
+            } else {
+                 console.error("data.items no es un array en generateDocumentPDF:", data.items);
+            }
+
+
+            doc.autoTable({
+                head: [tableColumn],
+                body: tableRows,
+                startY: startY + 15,
+                margin: { left: margin, right: margin },
+                headStyles: { fillColor: '#cdcdcd', textColor: '#000000' },
+                styles: { cellPadding: 2, fontSize: 9 },
+                didParseCell: function (data) {
+                    if (data.column.dataKey === 1) { // Descripción
+                        data.cell.styles.fontSize = 8;
+                    }
+                     if (data.column.index >= 2) { // P. Unit., Subtotal
+                        data.cell.styles.halign = 'right';
+                    }
+                     if (data.column.index === 0) { // Cant.
+                         data.cell.styles.halign = 'center';
+                     }
+                }
+            });
+
+             // Asegurarse de que total es un número antes de toFixed
+             const total = typeof data.total === 'number' ? data.total : 0;
+            const finalY = doc.autoTable.previous ? doc.autoTable.previous.finalY : startY + 15; // Fallback para Y
+            doc.setFontSize(14);
+            doc.text("TOTAL:", margin, finalY + 15);
+            doc.text(`Bs ${total.toFixed(2)}`, pageW - margin, finalY + 15, { align: 'right' });
+
+            doc.setFontSize(10);
+            const thankYouMessage = filePrefix === 'Cotizacion' ? "¡Gracias por su interés!" : "¡Gracias por su compra!";
+            doc.text(thankYouMessage, pageW / 2, finalY + 30, { align: 'center' });
+            doc.text("Visita nuestra tienda online: www.arelyshop.com", pageW / 2, finalY + 35, { align: 'center' });
+
+            if (preloadedPdfQr && preloadedPdfQr.dataURL) { // Verificar dataURL
+                const qrSize = 25;
+                const qrX = (pageW - qrSize) / 2;
+                const qrY = finalY + 40;
+                 try {
+                    doc.addImage(preloadedPdfQr.dataURL, 'JPEG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
+                 } catch (e) {
+                      console.error("Error adding QR image to PDF:", e);
+                 }
+            }
+
+
+            const customerName = (data.customer.name || '').trim().replace(/\s+/g, "_") || "sin-cliente"; // Usar \s+ para múltiples espacios
+            let fileName;
+            if (filePrefix === 'Nota_Venta') {
+                const saleId = (docIdentifier.split(': ')[1] || '').replace(/\s+/g, "_"); // Limpiar saleId también
+                fileName = `${filePrefix}_${saleId}_${customerName}.pdf`;
+            } else {
+                fileName = `${filePrefix}_${customerName}.pdf`;
+            }
+
+             // Limpiar caracteres inválidos del nombre de archivo
+             fileName = fileName.replace(/[^a-zA-Z0-9_.-]/g, '');
+
+
+            const pdfBlob = doc.output('blob');
+            return { pdfBlob, fileName };
+        }
+
 
         function renderSalesResults() {
-            const searchTerm = document.getElementById('search-sales-input')?.value.toLowerCase() || '';
+            const searchTerm = document.getElementById('search-sales-input')?.value.toLowerCase() || ''; // Añadir fallback
             const container = document.getElementById('sales-results-container');
-             if(!container) return;
-            container.innerHTML = '';
-            if (!Array.isArray(sales)) { container.innerHTML = '<p class="text-gray-500 text-center">No hay datos.</p>'; return; }
+             if(!container) return; // Salir si no existe
+
+            container.innerHTML = ''; // Limpiar siempre
+
+            // Asegurarse de que 'sales' es un array
+            if (!Array.isArray(sales)) {
+                 container.innerHTML = '<p class="text-gray-500 text-center">No hay datos de ventas disponibles.</p>';
+                 return;
+            }
 
             const filteredSales = sales.filter(s =>
-                 s && typeof s === 'object' && ( /* ... (sin cambios) ... */ )
+                 // Añadir validaciones y optional chaining
+                 s && typeof s === 'object' && (
+                    s.saleId?.toLowerCase().includes(searchTerm) ||
+                    s.nombreCliente?.toLowerCase().includes(searchTerm) ||
+                    s.contacto?.toString().toLowerCase().includes(searchTerm) ||
+                    s.userName?.toLowerCase().includes(searchTerm)
+                 )
             );
 
-            if (filteredSales.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center">No se encontraron ventas.</p>'; return; }
 
+            if (filteredSales.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">No se encontraron ventas.</p>';
+                return;
+            }
+
+            // Ya están ordenadas por fecha desc
             filteredSales.forEach(sale => {
+                 // Validar sale antes de usarlo
                  if (!sale || typeof sale !== 'object') return;
+
                 const isAnnulled = sale.estado === 'Anulada';
                 const statusText = isAnnulled ? 'Anulada' : 'Completada';
                 const statusColor = isAnnulled ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
@@ -817,13 +1377,38 @@
                 card.className = `p-4 border rounded-lg ${isAnnulled ? 'bg-gray-200 opacity-70' : 'bg-white'}`;
 
                 let productsHtml = '<ul>';
-                try { /* ... (sin cambios en parseo y renderizado de productos) ... */ } catch(e) { /* ... */ }
+                try {
+                    let saleProducts;
+                    if (typeof sale.productosVendidos === 'string') {
+                        try { saleProducts = JSON.parse(sale.productosVendidos); } catch (e) { saleProducts = null; }
+                    } else {
+                        saleProducts = sale.productosVendidos;
+                    }
+
+                    if (Array.isArray(saleProducts)) {
+                        saleProducts.forEach(p => {
+                            if (p && typeof p === 'object' && p.hasOwnProperty('cantidad') && p.hasOwnProperty('Nombre') && p.hasOwnProperty('precio')) {
+                                const price = p.precio !== undefined ? parseFloat(p.precio).toFixed(2) : 'N/A';
+                                const sku = p.SKU || 'N/A';
+                                productsHtml += `<li class="text-xs">${p.cantidad} x ${p.Nombre} (SKU: ${sku}) @ Bs ${price}</li>`;
+                            } else {
+                                console.warn(`Item inválido encontrado en productosVendidos para venta ${sale.saleId}:`, p);
+                                productsHtml += `<li class="text-xs text-red-500">Error: Item inválido</li>`;
+                            }
+                        });
+                    } else {
+                         productsHtml += `<li class="text-xs text-red-500">Error: Datos de productos no válidos</li>`;
+                    }
+                } catch(e) {
+                     console.error(`Error procesando productosVendidos (catch general) para venta ${sale.saleId}:`, e);
+                     productsHtml += `<li class="text-xs text-red-500">Error al leer productos</li>`;
+                }
                 productsHtml += '</ul>';
 
-                const totalVenta = sale.totalVenta !== undefined ? parseFloat(sale.totalVenta).toFixed(2) : 'N/A';
-                const fechaVentaStr = sale.fechaVenta ? new Date(sale.fechaVenta).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short'}) : 'Fecha inválida';
 
-                // Cambiado 'view-pdf-btn' a 'view-summary-btn' y texto del botón
+                const totalVenta = sale.totalVenta !== undefined ? parseFloat(sale.totalVenta).toFixed(2) : 'N/A';
+                const fechaVentaStr = sale.fechaVenta ? new Date(sale.fechaVenta).toLocaleString('es-ES') : 'Fecha inválida'; // Validar fecha
+
                 card.innerHTML = `
                     <div class="flex flex-wrap justify-between items-start gap-2">
                         <div>
@@ -834,10 +1419,10 @@
                         </div>
                         <div class="text-right">
                              <span class="font-semibold text-sm px-2 py-1 rounded-lg ${statusColor}">${statusText}</span>
-                             <div class="mt-2 flex space-x-2 justify-end flex-wrap gap-1">
-                                <button class="view-summary-btn text-xs bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700" data-saleid="${sale.saleId || ''}">Ver Resumen</button>
-                                <button class="reprint-btn text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700" data-saleid="${sale.saleId || ''}">Reimprimir</button>
-                                <button class="annul-btn text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 disabled:bg-gray-400" data-saleid="${sale.saleId || ''}" ${isAnnulled || !sale.saleId ? 'disabled' : ''}>Anular</button>
+                             <div class="mt-2 flex space-x-2 justify-end flex-wrap gap-1"> <!-- Añadir flex-wrap y gap -->
+                                <button class="view-pdf-btn text-xs bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700" data-saleid="${sale.saleId || ''}">Ver PDF</button>
+                                <button onclick="reprintSale('${sale.saleId || ''}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">Reimprimir</button>
+                                <button onclick="openAnnulConfirmModal('${sale.saleId || ''}')" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 disabled:bg-gray-400" ${isAnnulled || !sale.saleId ? 'disabled' : ''}>Anular</button> <!-- Deshabilitar si no hay saleId -->
                              </div>
                         </div>
                     </div>
@@ -849,104 +1434,504 @@
 
 
         // --- Funciones de Anulación ---
-        function openAnnulConfirmModal(saleId) { /* ... (sin cambios) ... */ }
-        async function annulSaleInBackend(saleId) { /* ... (sin cambios) ... */ }
-        // --- Fin Funciones de Anulación ---
-
-
-        function reprintSale(saleId) { /* ... (sin cambios) ... */ }
-        function showProductModal(product) { /* ... (sin cambios) ... */ }
-        function copyToClipboard(text, buttonElement) { /* ... (sin cambios) ... */ }
-        function showQrModal() { /* ... (sin cambios) ... */ }
-        function showShareOptions(pdfBlob, fileName, title, text) { /* ... (sin cambios) ... */ }
-
-        // --- Funciones del Visor Resumen (Nuevas/Modificadas) ---
-        function showSaleSummaryModal(saleId) {
-            if(!saleId) return;
-            const sale = sales.find(s => s && s.saleId === saleId);
-            if (!sale) {
-                showNotification("Venta no encontrada para mostrar resumen.", "error");
+        function openAnnulConfirmModal(saleId) {
+             // Validar saleId antes de usarlo
+            if (!saleId) {
+                showNotification("ID de venta inválido.", "error");
                 return;
             }
-            const modal = document.getElementById('sale-summary-modal');
-            const titleEl = document.getElementById('summary-modal-title');
-            const customerNameEl = document.getElementById('summary-customer-name');
-            const customerContactEl = document.getElementById('summary-customer-contact');
-            const customerIdEl = document.getElementById('summary-customer-id');
-            const saleDateEl = document.getElementById('summary-sale-date');
-            const sellerNameEl = document.getElementById('summary-seller-name');
-            const productListEl = document.getElementById('summary-products-list');
-            const totalAmountEl = document.getElementById('summary-total-amount');
+            saleIdToAnnul = saleId;
+            const sale = sales.find(s => s && s.saleId === saleId); // Añadir s &&
+             if (!sale) {
+                  showNotification("Venta no encontrada.", "error");
+                  return;
+             }
+            const modalTextEl = document.getElementById('annul-modal-text');
+            if(modalTextEl) modalTextEl.textContent = `¿Estás seguro de que quieres anular la venta ${saleId}? Esta acción no se puede deshacer y el stock de los productos involucrados será restaurado.`;
+            const modalEl = document.getElementById('annul-confirm-modal');
+            if(modalEl) modalEl.classList.remove('hidden');
+        }
 
-             if(!modal || !titleEl || !customerNameEl || !customerContactEl || !customerIdEl || !saleDateEl || !sellerNameEl || !productListEl || !totalAmountEl) {
-                  console.error("Elementos del modal de resumen no encontrados.");
+
+        async function annulSaleInBackend(saleId) {
+            // Validar saleId
+            if (!saleId) {
+                 console.error("annulSaleInBackend llamado sin saleId");
+                 showNotification("Error interno: ID de venta faltante.", "error");
+                 return;
+            }
+
+            const button = document.getElementById('confirm-annul-btn');
+            const buttonText = document.getElementById('annul-button-text');
+            const loader = document.getElementById('annul-loader');
+             // Verificar existencia de elementos
+             if (!button || !buttonText || !loader) {
+                  console.error("Elementos del modal de anulación no encontrados.");
+                  // Ocultar modal manualmente si no se encuentran botones
+                  const modal = document.getElementById('annul-confirm-modal');
+                  if (modal) modal.classList.add('hidden');
+                  saleIdToAnnul = null;
                   return;
              }
 
+            buttonText.classList.add('hidden');
+            loader.classList.remove('hidden');
+            button.disabled = true;
+
             try {
-                // Populate basic info
-                titleEl.textContent = `Resumen - Venta ${sale.saleId}`;
-                customerNameEl.textContent = sale.nombreCliente || 'N/A';
-                customerContactEl.textContent = sale.contacto || 'N/A';
-                customerIdEl.textContent = sale.nitCi || 'N/A';
-                saleDateEl.textContent = sale.fechaVenta ? new Date(sale.fechaVenta).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short'}) : 'Fecha inválida';
-                sellerNameEl.textContent = sale.userName || 'N/A';
-                totalAmountEl.textContent = sale.totalVenta !== undefined ? parseFloat(sale.totalVenta).toFixed(2) : '0.00';
+                // Usar simpleFetch
+                 const result = await simpleFetch(`${API_BASE_URL}/sales`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ saleId: saleId })
+                 });
 
-                // Populate product list
-                productListEl.innerHTML = ''; // Clear previous
-                let saleProducts;
-                if (typeof sale.productosVendidos === 'string') {
-                    try { saleProducts = JSON.parse(sale.productosVendidos); } catch (e) { saleProducts = null; }
+                if (result.status === 'success') {
+                    showNotification(result.message || `Venta ${saleId} anulada.`, 'success'); // Usar ||
+                    // Esperar ambas cargas antes de renderizar
+                    await Promise.all([fetchSales(), fetchProducts()]);
+                    renderSalesResults();
                 } else {
-                    saleProducts = sale.productosVendidos;
+                    // Si el backend devolvió status != 'success'
+                    throw new Error(result.message || 'Error desconocido del servidor al anular.');
                 }
-
-                if (Array.isArray(saleProducts) && saleProducts.length > 0) {
-                     saleProducts.forEach(p => {
-                        if (p && typeof p === 'object' && p.hasOwnProperty('cantidad') && p.hasOwnProperty('Nombre') && p.hasOwnProperty('precio')) {
-                            const price = p.precio !== undefined ? parseFloat(p.precio).toFixed(2) : 'N/A';
-                            const sku = p.SKU || 'N/A';
-                            const listItem = document.createElement('div');
-                            listItem.className = 'text-xs py-1 border-b border-gray-200 last:border-b-0';
-                            listItem.textContent = `${p.cantidad} x ${p.Nombre} (SKU: ${sku}) @ Bs ${price}`;
-                            productListEl.appendChild(listItem);
-                        } else {
-                             const errorItem = document.createElement('div');
-                             errorItem.className = 'text-xs py-1 text-red-500';
-                             errorItem.textContent = 'Error: Item inválido';
-                             productListEl.appendChild(errorItem);
-                        }
-                    });
-                } else {
-                     productListEl.innerHTML = '<p class="text-xs text-gray-500">No se encontraron productos para esta venta.</p>';
-                }
-
-                modal.classList.remove('hidden'); // Show modal
-
             } catch (error) {
-                console.error("Error mostrando resumen de venta:", error);
-                showNotification(`No se pudo mostrar el resumen: ${error.message}`, "error");
-                closeSaleSummaryModal(); // Close if error
+                console.error('Error al anular la venta:', error);
+                showNotification(`Error: ${error.message}`, 'error');
+            } finally {
+                const modal = document.getElementById('annul-confirm-modal');
+                if (modal) modal.classList.add('hidden');
+                buttonText.classList.remove('hidden');
+                loader.classList.add('hidden');
+                button.disabled = false;
+                saleIdToAnnul = null;
             }
         }
 
-        function closeSaleSummaryModal() {
-            const modal = document.getElementById('sale-summary-modal');
-            if (modal) modal.classList.add('hidden');
-            // Opcional: Limpiar contenido del modal al cerrar
-            const productListEl = document.getElementById('summary-products-list');
-             if(productListEl) productListEl.innerHTML = '<p class="text-gray-500">Cargando productos...</p>';
+        // --- Fin Funciones de Anulación ---
 
+
+        function reprintSale(saleId) {
+             if (!saleId) return; // Validar ID
+            const saleToReprint = sales.find(s => s && s.saleId === saleId);
+            if (!saleToReprint) {
+                showNotification("Venta no encontrada para reimprimir.", 'error');
+                return;
+            }
+
+            try {
+                 let saleItems;
+                 if (typeof saleToReprint.productosVendidos === 'string') {
+                     try { saleItems = JSON.parse(saleToReprint.productosVendidos); } catch (e) { saleItems = []; }
+                 } else {
+                     // Asumir que es objeto/array si no es string, validar si es array
+                     saleItems = Array.isArray(saleToReprint.productosVendidos) ? saleToReprint.productosVendidos : [];
+                 }
+
+                 // Doble verificación por si acaso
+                 if (!Array.isArray(saleItems)) {
+                     console.warn(`productosVendidos for reprint ${saleId} could not be resolved to an array:`, saleToReprint.productosVendidos);
+                     saleItems = [];
+                 }
+
+                const saleData = {
+                    customer: {
+                        name: saleToReprint.nombreCliente,
+                        contact: saleToReprint.contacto,
+                        id: saleToReprint.nitCi
+                    },
+                    items: saleItems,
+                    total: parseFloat(saleToReprint.totalVenta || 0) // Añadir || 0
+                };
+                const { pdfBlob, fileName } = generateSalePDF(saleId, saleData);
+                 // Verificar si se generó el PDF
+                 if(pdfBlob && fileName) {
+                    showShareOptions(pdfBlob, fileName, 'Reimprimir Nota de Venta', 'El PDF de la nota de venta ha sido generado. ¿Qué deseas hacer?');
+                 } else {
+                      throw new Error("No se pudo generar el Blob del PDF.");
+                 }
+            } catch (error) {
+                console.error("Error preparando data para PDF reprint:", error);
+                showNotification(`No se pudo generar el PDF para esta venta: ${error.message}`, 'error');
+            }
         }
-        // --- Fin Funciones del Visor Resumen ---
 
 
-        function startScanner(targetInputId) { /* ... (sin cambios) ... */ }
-        function stopScanner() { /* ... (sin cambios) ... */ }
+        function showProductModal(product) {
+            if (!product || typeof product !== 'object') {
+                 console.error("showProductModal: Datos de producto inválidos:", product);
+                 return;
+            }
+             const modal = document.getElementById('productDetailModal');
+             if(!modal) return; // Salir si el modal no existe
+
+             // Obtener elementos del modal (con verificación)
+            const imgEl = document.getElementById('modalProductImage');
+            const nameEl = document.getElementById('modalProductName');
+            const skuEl = document.getElementById('modalProductSku');
+            const codeEl = document.getElementById('modalProductCode');
+            const branchEl = document.getElementById('modalProductBranch');
+            const stockEl = document.getElementById('modalProductStock');
+            const priceEl = document.getElementById('modalProductPrice');
+            const purchasePriceEl = document.getElementById('modalProductPurchasePrice');
+            const wholesalePriceEl = document.getElementById('modalProductWholesalePrice');
+            const discountContainer = document.getElementById('discountPriceContainer');
+            const discountPriceEl = document.getElementById('modalProductDiscountPrice');
+
+            // Llenar datos si los elementos existen
+            if(imgEl) imgEl.src = product.urlFoto1 || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen';
+            if(nameEl) nameEl.textContent = product.nombre || 'Sin Nombre';
+            if(skuEl) skuEl.textContent = product.sku || 'N/A';
+            if(codeEl) codeEl.textContent = product.codigoBarras || 'N/A';
+            if(branchEl) branchEl.textContent = product.ciudadSucursal || 'N/A';
+            if(stockEl) stockEl.textContent = product.cantidad?.toString() || '0';
+
+            const salePrice = parseFloat(product.precioVenta || 0).toFixed(2);
+            const discountPrice = parseFloat(product.precioDescuento || 0);
+            const purchasePrice = parseFloat(product.precioCompra || 0).toFixed(2);
+            const wholesalePrice = parseFloat(product.precioMayoreo || 0).toFixed(2);
+
+            if(priceEl) priceEl.textContent = `Bs. ${salePrice}`;
+            if(purchasePriceEl) purchasePriceEl.textContent = `Bs. ${purchasePrice}`;
+            if(wholesalePriceEl) wholesalePriceEl.textContent = `Bs. ${wholesalePrice}`;
+
+            if (discountContainer && discountPriceEl && priceEl) {
+                if (discountPrice > 0) {
+                    discountPriceEl.textContent = `Bs. ${discountPrice.toFixed(2)}`;
+                    discountContainer.classList.remove('hidden');
+                    priceEl.classList.add('line-through');
+                } else {
+                    discountContainer.classList.add('hidden');
+                    priceEl.classList.remove('line-through');
+                }
+            }
+
+            modal.classList.remove('hidden'); // Mostrar modal
+        }
+
+
+        function copyToClipboard(text, buttonElement) {
+            if (!text || text === 'N/A' || !buttonElement) return; // Añadir chequeo de buttonElement
+
+            navigator.clipboard.writeText(text).then(() => {
+                const originalHTML = buttonElement.innerHTML;
+                buttonElement.innerHTML = '¡Copiado!';
+                // Limpiar timeout anterior si existe
+                clearTimeout(buttonElement.copyTimeoutId);
+                buttonElement.copyTimeoutId = setTimeout(() => {
+                    buttonElement.innerHTML = originalHTML;
+                }, 1500);
+            }).catch(err => {
+                 console.warn('navigator.clipboard falló (puede ser por iframe/seguridad), intentando execCommand:', err);
+                 try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed'; // Evitar scroll
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                     if(successful) {
+                        const originalHTML = buttonElement.innerHTML;
+                        buttonElement.innerHTML = '¡Copiado!';
+                        clearTimeout(buttonElement.copyTimeoutId);
+                        buttonElement.copyTimeoutId = setTimeout(() => {
+                            buttonElement.innerHTML = originalHTML;
+                        }, 1500);
+                     } else {
+                          throw new Error('execCommand no tuvo éxito');
+                     }
+                 } catch (execErr) {
+                     showNotification('No se pudo copiar el texto.', 'error');
+                     console.error('Fallback execCommand también falló:', execErr);
+                 }
+            });
+        }
+
+        function showQrModal() {
+            const qrImg = document.getElementById('pos-qr-code');
+            const modalImg = document.getElementById('modalQrImage');
+            const modal = document.getElementById('qrCodeModal');
+             if (qrImg && modalImg && modal && qrImg.src && !qrImg.src.includes('placehold.co')) {
+                modalImg.src = qrImg.src;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function showShareOptions(pdfBlob, fileName, title, text) {
+             // Validar Blob
+             if (!(pdfBlob instanceof Blob)) {
+                 console.error("showShareOptions: pdfBlob inválido", pdfBlob);
+                 showNotification("Error interno al generar el PDF.", "error");
+                 return;
+             }
+             if (!fileName) fileName = "documento.pdf"; // Fallback filename
+
+            currentPdfBlob = pdfBlob;
+            currentPdfFileName = fileName;
+
+            const modal = document.getElementById('share-modal');
+            const modalTitle = document.getElementById('share-modal-title');
+            const modalText = document.getElementById('share-modal-text');
+            const shareBtn = document.getElementById('share-pdf-btn');
+            const downloadBtn = document.getElementById('download-pdf-btn');
+            const closeModalBtn = document.getElementById('close-share-modal');
+
+             // Verificar si existen elementos del modal
+             if (!modal || !modalTitle || !modalText || !shareBtn || !downloadBtn || !closeModalBtn) {
+                 console.error("Elementos del modal de compartir no encontrados.");
+                 // Intentar descarga directa como fallback si no se muestra el modal
+                 try {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(currentPdfBlob);
+                    link.download = currentPdfFileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                 } catch (e) {
+                     console.error("Fallback de descarga directa falló:", e);
+                     showNotification("No se pudo descargar el PDF.", "error");
+                 }
+                 return;
+             }
+
+
+            modalTitle.textContent = title;
+            modalText.textContent = text;
+
+            let fileToShare;
+            try {
+                 fileToShare = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
+            } catch (e) {
+                 console.error("Error creando objeto File:", e);
+                 showNotification("No se pudo preparar el archivo para compartir.", "error");
+                 shareBtn.classList.add('hidden'); // Ocultar botón si falla File
+                 shareBtn.onclick = null;
+                 // Continuar para mostrar al menos la opción de descarga
+            }
+
+
+            const dataToShare = fileToShare ? { files: [fileToShare] } : null;
+
+            // Verificar Web Share API
+            if (dataToShare && navigator.share && navigator.canShare && navigator.canShare(dataToShare)) {
+                shareBtn.classList.remove('hidden');
+                shareBtn.onclick = async () => {
+                    try {
+                        await navigator.share({
+                            files: [fileToShare],
+                            title: `Documento: ${currentPdfFileName}`,
+                            text: 'Documento generado desde el sistema ArelyShop.',
+                        });
+                        modal.classList.add('hidden'); // Cerrar modal después de compartir (o intentar)
+                    } catch (error) {
+                        console.error('Error al compartir:', error);
+                        if (error.name !== 'AbortError') {
+                            showNotification('No se pudo compartir el archivo.', 'error');
+                        }
+                        // No cerrar modal si falla para que pueda descargar
+                    }
+                    // Quitar finally para no cerrar si falla
+                };
+            } else {
+                shareBtn.classList.add('hidden');
+                shareBtn.onclick = null;
+                 if(dataToShare) console.log("Web Share API no soportada o no se puede compartir este archivo.");
+            }
+
+            modal.classList.remove('hidden');
+
+            downloadBtn.onclick = () => {
+                 try {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(currentPdfBlob);
+                    link.download = currentPdfFileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    modal.classList.add('hidden');
+                 } catch (e) {
+                      console.error("Error en la descarga del PDF:", e);
+                      showNotification("No se pudo descargar el PDF.", "error");
+                 }
+            };
+
+            closeModalBtn.onclick = () => {
+                modal.classList.add('hidden');
+            };
+        }
+
+        // --- Funciones del Visor PDF ---
+        function showPdfModal(saleId) {
+             if(!saleId) return;
+            const sale = sales.find(s => s && s.saleId === saleId);
+            if (!sale) {
+                showNotification("Venta no encontrada para mostrar PDF.", "error");
+                return;
+            }
+             const modal = document.getElementById('pdf-viewer-modal');
+             const embedContainer = document.getElementById('pdf-embed-container');
+             const titleEl = document.getElementById('pdf-viewer-title');
+             if(!modal || !embedContainer || !titleEl) {
+                  console.error("Elementos del modal visor PDF no encontrados.");
+                  return;
+             }
+
+
+            try {
+                let saleItems;
+                if (typeof sale.productosVendidos === 'string') {
+                    try { saleItems = JSON.parse(sale.productosVendidos); } catch (e) { saleItems = []; }
+                } else {
+                    saleItems = Array.isArray(sale.productosVendidos) ? sale.productosVendidos : [];
+                }
+
+                const saleData = {
+                    customer: { name: sale.nombreCliente, contact: sale.contacto, id: sale.nitCi },
+                    items: saleItems,
+                    total: parseFloat(sale.totalVenta || 0)
+                };
+
+                const { pdfBlob } = generateSalePDF(saleId, saleData);
+                 if (!pdfBlob) throw new Error("generateSalePDF no devolvió un Blob.");
+
+
+                if (currentPdfViewerUrl) {
+                    URL.revokeObjectURL(currentPdfViewerUrl);
+                }
+
+                currentPdfViewerUrl = URL.createObjectURL(pdfBlob);
+
+                embedContainer.innerHTML = '';
+                const embed = document.createElement('embed');
+                embed.src = currentPdfViewerUrl;
+                embed.type = 'application/pdf';
+                // embed.style.width = '100%'; // Tailwind maneja esto con w-full
+                // embed.style.height = '80vh';
+                embed.className = 'w-full h-[80vh]'; // Usar clases Tailwind
+                embedContainer.appendChild(embed);
+
+                titleEl.textContent = `Vista Previa - Venta ${saleId}`;
+                modal.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error generando o mostrando PDF en modal:", error);
+                showNotification(`No se pudo mostrar el PDF: ${error.message}`, "error");
+                closePdfModal();
+            }
+        }
+
+
+        function closePdfModal() {
+            const modal = document.getElementById('pdf-viewer-modal');
+            const embedContainer = document.getElementById('pdf-embed-container');
+            if (modal) modal.classList.add('hidden');
+            if (embedContainer) embedContainer.innerHTML = '<p class="text-center text-gray-500 py-10">Cargando PDF...</p>';
+
+            if (currentPdfViewerUrl) {
+                URL.revokeObjectURL(currentPdfViewerUrl);
+                currentPdfViewerUrl = null;
+            }
+        }
+        // --- Fin Funciones del Visor PDF ---
+
+
+        function startScanner(targetInputId) {
+            if (!html5QrCode) {
+                 console.warn("Html5Qrcode no inicializado.");
+                 // Intentar inicializar de nuevo
+                 try {
+                     const readerElement = document.getElementById("reader");
+                     if (!readerElement) throw new Error("Elemento 'reader' no encontrado.");
+                    html5QrCode = new Html5Qrcode("reader");
+                 } catch (e) {
+                     console.error("Error re-inicializando Html5Qrcode:", e);
+                     showNotification("Error al iniciar el escáner.", "error");
+                     return;
+                 }
+            }
+
+             const modal = document.getElementById('scanner-modal');
+             if(modal) modal.classList.remove('hidden');
+
+
+            const onScanSuccess = (decodedText, decodedResult) => {
+                const targetInput = document.getElementById(targetInputId);
+                if (targetInput) {
+                    targetInput.value = decodedText;
+                    const inputEvent = new Event('input', { bubbles: true });
+                    targetInput.dispatchEvent(inputEvent);
+
+                     if (targetInputId === 'search-product') {
+                        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
+                        targetInput.dispatchEvent(enterEvent);
+                     }
+                }
+                stopScanner();
+            };
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+
+             Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    const rearCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
+                    const cameraId = rearCamera ? rearCamera.id : devices[0].id;
+
+                    // Verificar si ya está escaneando
+                    if (html5QrCode && !(typeof html5QrCode.getState === 'function' && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING)) {
+                        html5QrCode.start( cameraId, config, onScanSuccess, (errorMessage) => {})
+                        .catch(err => {
+                            console.warn("Intento de escanear con cámara preferida falló, intentando fallback:", err);
+                             // Solo intentar fallback si no está escaneando
+                             if (html5QrCode && !(typeof html5QrCode.getState === 'function' && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING)) {
+                                html5QrCode.start( { facingMode: "environment" }, config, onScanSuccess, (e)=>{})
+                                .catch(errFallback => {
+                                      console.error("Fallback del escáner también falló.", errFallback);
+                                      showNotification("No se pudo iniciar la cámara. Revisa los permisos.", 'error');
+                                      stopScanner();
+                                });
+                            }
+                        });
+                    } else if (html5QrCode && typeof html5QrCode.getState === 'function' && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING){
+                         console.log("El escáner ya estaba activo."); // Evitar iniciar de nuevo si ya está corriendo
+                    } else {
+                         console.error("html5QrCode no está listo o getState no está disponible.");
+                         stopScanner(); // Cerrar modal si hay problema
+                    }
+                } else {
+                    console.error("No se encontraron cámaras.");
+                     showNotification("No se detectaron cámaras en tu dispositivo.", 'error');
+                     stopScanner();
+                }
+            }).catch(err => {
+                console.error("Error obteniendo cámaras:", err);
+                 showNotification("Error al acceder a las cámaras. Asegúrate de dar permiso.", 'error');
+                 stopScanner();
+            });
+        }
+
+        function stopScanner() {
+             // Verificar si html5QrCode existe y tiene el método getState antes de llamarlo
+             if (html5QrCode && typeof html5QrCode.getState === 'function' && html5QrCode.getState() === Html5QrcodeScannerState.SCANNING) {
+                html5QrCode.stop().then(ignore => {
+                    console.log("QR Code scanning stopped.");
+                }).catch(err => {
+                    console.error("Fallo al detener el escáner:", err);
+                }).finally(() => {
+                     const modal = document.getElementById('scanner-modal');
+                     if(modal) modal.classList.add('hidden');
+                });
+            } else {
+                 const modal = document.getElementById('scanner-modal');
+                 if(modal) modal.classList.add('hidden');
+            }
+        }
 
 
     </script>
 </body>
 </html>
-
