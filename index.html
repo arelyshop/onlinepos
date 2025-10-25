@@ -19,7 +19,7 @@
         body { font-family: 'Inter', sans-serif; }
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3b82f6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
+
         /* Tab Styling */
         .tab-button {
             display: flex;
@@ -59,7 +59,7 @@
 
         #tab-sales-registry.tab-active { border-color: #16a34a; color: #16a34a; font-weight: 600; }
         #tab-sales-registry.tab-active svg { fill: #16a34a; }
-        
+
         .tab-content { display: none; }
         .copy-btn { background: none; border: none; cursor: pointer; margin-left: 8px; color: #6b7280; }
         .copy-btn:hover { color: #2c3c53; }
@@ -172,7 +172,7 @@
                                     <p class="text-sm">Fecha: <span id="current-date">--/--/----</span></p>
                                 </div>
                             </div>
-                            
+
                             <div class="p-6">
                                 <div class="relative mb-4">
                                     <label for="search-product" class="block text-sm font-medium text-gray-700 mb-1">Buscar Producto (Nombre, SKU o Código de Barras)</label>
@@ -256,7 +256,7 @@
 
             </div>
         </main>
-        
+
         <footer class="bg-gray-200 text-center p-4">
             <p class="text-sm text-gray-600">&copy; <span id="current-year"></span> ArelyShop. Todos los derechos reservados.</p>
         </footer>
@@ -323,20 +323,41 @@
         </div>
     </div>
 
+    <!-- Annul Sale Confirmation Modal -->
+    <div id="annul-confirm-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Anular Venta</h3>
+                <div class="mt-2 px-7 py-3"><p id="annul-modal-text" class="text-sm text-gray-500">¿Estás seguro? Esta acción no se puede deshacer y el stock será restaurado.</p></div>
+                <div class="items-center px-4 py-3">
+                    <button id="confirm-annul-btn" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-lg w-auto shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">
+                        <span id="annul-button-text">Confirmar Anulación</span>
+                        <div id="annul-loader" class="loader hidden mx-auto"></div>
+                    </button>
+                    <button id="cancel-annul-btn" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-lg w-auto ml-2 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         // --- GLOBAL APP STATE ---
         const API_BASE_URL = '/.netlify/functions';
-        
+
         let products = [];
         let sales = [];
         let cart = [];
         let preloadedLogo = null;
-        let preloadedPdfQr = null; 
-        let html5QrCode = null; 
+        let preloadedPdfQr = null;
+        let html5QrCode = null;
         let currentPdfBlob = null;
         let currentPdfFileName = '';
         let currentUser = null; // Almacenará los datos del usuario logueado
+        let saleIdToAnnul = null; // Para la confirmación de anulación
 
         // --- AUTHENTICATION & INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -374,7 +395,6 @@
                     const result = await response.json();
 
                     if (response.ok && result.status === 'success') {
-                        // Guardar usuario en sessionStorage
                         sessionStorage.setItem('arelyShopUser', JSON.stringify(result.user));
                         currentUser = result.user;
                         initializeApp();
@@ -391,7 +411,7 @@
                 }
             });
         }
-        
+
         function checkAuth() {
             const userString = sessionStorage.getItem('arelyShopUser');
             if (userString) {
@@ -409,11 +429,10 @@
             products = [];
             sales = [];
             cart = [];
-            
+
             document.getElementById('login-container').classList.remove('hidden');
             document.getElementById('app-container').classList.add('hidden');
-            
-            // Resetear UI
+
             document.getElementById('cart-items').innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
             document.getElementById('sales-results-container').innerHTML = '';
             document.getElementById('customer-form').reset();
@@ -421,22 +440,18 @@
         }
 
         async function initializeApp() {
-            // Ocultar login y mostrar app
             document.getElementById('login-container').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
             document.getElementById('app-container').classList.add('flex');
 
-            // Mostrar info del usuario
             document.getElementById('user-fullname').textContent = currentUser.full_name || 'Usuario';
             document.getElementById('user-role').textContent = currentUser.role || 'Rol';
 
-            // Configurar Pestañas y Eventos
             initTabs();
             setupEventListeners();
             updateDateTime();
-            setInterval(updateDateTime, 60000); 
+            setInterval(updateDateTime, 60000);
 
-            // Cargar datos en paralelo
             await Promise.all([
                 fetchProducts(),
                 fetchSales(),
@@ -444,11 +459,10 @@
                 loadImageAsJpegDataUrl('/images/qr-pdf.webp').then(qr => preloadedPdfQr = qr)
             ]);
 
-            // Renderizar datos una vez cargados
             renderSalesResults();
             displayNextSaleId();
         }
-        
+
         function updateDateTime() {
             const now = new Date();
             const dateOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
@@ -518,7 +532,7 @@
             img.onerror = () => resolve(null);
             img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
         });
-        
+
         function initTabs() {
             const tabs = {
                 pos: { btn: document.getElementById('tab-pos'), content: document.getElementById('content-pos') },
@@ -538,7 +552,6 @@
                     if (key === 'salesRegistry') renderSalesResults();
                 });
             });
-            // Asegurarse de que el tab de POS esté activo al inicio
             tabs.pos.btn.classList.add('tab-active');
             tabs.pos.btn.classList.remove('tab-inactive');
             tabs.pos.content.style.display = 'block';
@@ -555,7 +568,7 @@
             document.getElementById('generate-quote-button').addEventListener('click', handleGenerateQuote);
 
             document.getElementById('closeProductModal').addEventListener('click', () => document.getElementById('productDetailModal').classList.add('hidden'));
-            
+
             document.querySelectorAll('.copy-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const targetId = e.currentTarget.dataset.copyTarget;
@@ -563,7 +576,7 @@
                     copyToClipboard(textToCopy, e.currentTarget);
                 });
             });
-            
+
             document.getElementById('cart-items').addEventListener('click', (e) => {
                 const infoButton = e.target.closest('.info-btn');
                 if (infoButton) {
@@ -576,17 +589,29 @@
                     }
                 }
             });
-            
+
             document.getElementById('closeQrModal').addEventListener('click', () => {
                 document.getElementById('qrCodeModal').classList.add('hidden');
             });
 
             document.getElementById('scan-pos-btn').addEventListener('click', () => startScanner('search-product'));
             document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
+
+            // Event listeners para el modal de anulación
+            document.getElementById('cancel-annul-btn').addEventListener('click', () => {
+                document.getElementById('annul-confirm-modal').classList.add('hidden');
+                saleIdToAnnul = null; // Limpiar ID al cancelar
+            });
+            document.getElementById('confirm-annul-btn').addEventListener('click', () => {
+                if (saleIdToAnnul) {
+                    annulSaleInBackend(saleIdToAnnul);
+                }
+            });
         }
 
         // --- DATA MAPPING ---
         const mapProductToFrontend = (p) => ({
+            id: p.id, // Asegurarse de tener el ID para actualizar stock
             nombre: p.name,
             sku: p.sku,
             precioVenta: p.sale_price,
@@ -598,7 +623,7 @@
             ciudadSucursal: p.ciudad_sucursal,
             urlFoto1: p.photo_url_1
         });
-        
+
         async function fetchProducts() {
             try {
                 const response = await robustFetch(`${API_BASE_URL}/products`);
@@ -615,31 +640,22 @@
                 const response = await robustFetch(`${API_BASE_URL}/sales`);
                 const result = await response.json();
                 if (result.status === 'success') {
-                    sales = result.data;
+                    // Ordenar por fecha descendente al cargar
+                    sales = result.data.sort((a, b) => new Date(b.fechaVenta) - new Date(a.fechaVenta));
                 }
             } catch (error) {
                 console.error("Fallo al cargar las ventas:", error);
                 showNotification("No se pudieron cargar las ventas. Revisa tu conexión.", 'error');
             }
         }
-        
+
         function displayNextSaleId() {
             let nextId = "AS1";
             if (sales.length > 0) {
-                // Ordenar ventas por fecha (o ID numérico) para encontrar la última
-                const sortedSales = [...sales].sort((a, b) => {
-                    const aNum = parseInt(a.saleId.substring(2));
-                    const bNum = parseInt(b.saleId.substring(2));
-                    if (!isNaN(aNum) && !isNaN(bNum)) {
-                        return aNum - bNum;
-                    }
-                    // Fallback si los IDs no son numéricos
-                    return new Date(b.fechaVenta) - new Date(a.fechaVenta);
-                });
-                
-                const lastSaleId = sortedSales[sortedSales.length - 1].saleId;
-                const lastIdNumber = parseInt(lastSaleId.substring(2));
-                
+                 // Ya están ordenadas por fecha descendente, la primera es la más reciente
+                 const lastSaleId = sales[0].saleId;
+                 const lastIdNumber = parseInt(lastSaleId.substring(2));
+
                 if (!isNaN(lastIdNumber)) {
                     nextId = 'AS' + (lastIdNumber + 1);
                 }
@@ -670,7 +686,7 @@
                 resultsContainer.classList.add('hidden');
                 return;
             }
-            const filteredProducts = products.filter(p => 
+            const filteredProducts = products.filter(p =>
                 p.nombre?.toLowerCase().includes(searchTerm) ||
                 p.sku?.toString().toLowerCase().includes(searchTerm)
             );
@@ -690,8 +706,8 @@
         }
 
         function addToCart(product) {
-            const latestProductInfo = products.find(p => p.sku === product.sku && p.nombre === product.nombre);
-            
+            const latestProductInfo = products.find(p => p.id === product.id); // Usar ID para encontrar el producto exacto
+
             if (!latestProductInfo || latestProductInfo.cantidad <= 0) {
                 showNotification('Este producto no tiene stock disponible.', 'error');
                 document.getElementById('search-product').value = '';
@@ -699,7 +715,7 @@
                 return;
             }
 
-            const existingCartItem = cart.find(item => item.sku === product.sku && item.nombre === product.nombre);
+            const existingCartItem = cart.find(item => item.id === product.id); // Buscar por ID en el carrito
 
             if (existingCartItem) {
                 if (existingCartItem.quantity < latestProductInfo.cantidad) {
@@ -713,7 +729,7 @@
                                : parseFloat(latestProductInfo.precioVenta);
                 cart.push({ ...latestProductInfo, quantity: 1, customPrice: defaultPrice });
             }
-            
+
             document.getElementById('search-product').value = '';
             document.getElementById('search-results').classList.add('hidden');
             renderCart();
@@ -736,7 +752,7 @@
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-800 align-middle">${item.nombre}</td>
                         <td class="px-4 py-3 text-sm align-middle"><input type="number" step="0.01" value="${item.customPrice.toFixed(2)}" onchange="updateItemPrice(${index}, this.value)" class="w-24 text-center border rounded-lg py-1"></td>
-                        <td class="px-4 py-3 text-sm text-center align-middle"><input type="number" min="1" value="${item.quantity}" onchange="setQuantity(${index}, this.value)" class="w-20 text-center border rounded-lg py-1"></td>
+                        <td class="px-4 py-3 text-sm text-center align-middle"><input type="number" min="1" max="${item.cantidad}" value="${item.quantity}" onchange="setQuantity(${index}, this.value)" class="w-20 text-center border rounded-lg py-1"></td>
                         <td class="px-4 py-3 text-sm text-right font-medium align-middle">Bs ${subtotal.toFixed(2)}</td>
                         <td class="px-2 py-3 text-center align-middle"><button onclick="removeFromCart(${index})" class="text-red-500 hover:text-red-700 font-bold text-xl">&times;</button></td>
                     `;
@@ -745,7 +761,7 @@
             }
             updateTotal();
         }
-        
+
         function updateItemPrice(index, newPrice) {
             const price = parseFloat(newPrice);
             if (!isNaN(price) && price >= 0) cart[index].customPrice = price;
@@ -754,23 +770,27 @@
 
         function setQuantity(index, newQuantity) {
             const cartItem = cart[index];
-            const productInStock = products.find(p => p.sku === cartItem.sku && p.nombre === cartItem.nombre);
+            const productInStock = products.find(p => p.id === cartItem.id); // Buscar por ID
             const maxStock = productInStock ? productInStock.cantidad : 0;
-            
+
             let quantity = parseInt(newQuantity);
 
             if (isNaN(quantity) || quantity < 1) {
-                quantity = 1;
+                quantity = 1; // Mínimo 1
             }
 
             if (quantity > maxStock) {
                 showNotification(`Stock insuficiente. Máximo disponible: ${maxStock}`, 'error');
-                cart[index].quantity = maxStock;
-                if (maxStock === 0) {
-                     cart.splice(index, 1);
-                }
+                quantity = maxStock; // Ajustar al máximo disponible
+            }
+
+            if (maxStock === 0 && quantity > 0) {
+                 showNotification(`Producto sin stock.`, 'error');
+                 cart.splice(index, 1); // Remover si se intenta poner cantidad > 0 y no hay stock
+            } else if (quantity === 0) {
+                 cart.splice(index, 1); // Remover si la cantidad se establece en 0
             } else {
-                cart[index].quantity = quantity;
+                 cart[index].quantity = quantity;
             }
 
             renderCart();
@@ -799,16 +819,17 @@
             button.disabled = true;
 
             const saleId = document.getElementById('current-sale-id').textContent;
-            
+
             const saleData = {
                 saleId: saleId,
                 customer: { name: document.getElementById('customer-name').value, contact: document.getElementById('customer-contact').value, id: document.getElementById('customer-id').value },
-                items: cart.map(item => ({ 
-                    Nombre: item.nombre, 
-                    SKU: item.sku, 
-                    cantidad: item.quantity, 
+                items: cart.map(item => ({
+                    productId: item.id, // Enviar ID del producto
+                    Nombre: item.nombre,
+                    SKU: item.sku,
+                    cantidad: item.quantity,
                     precio: item.customPrice,
-                    'Precio (Compra)': item.precioCompra // Para reportes de ganancias
+                    'Precio (Compra)': item.precioCompra
                 })),
                 total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0),
                 user: {
@@ -816,28 +837,22 @@
                     fullName: currentUser.full_name
                 }
             };
-            
+
             try {
-                // 1. Guardar la venta en la base de datos y actualizar stock
                 const response = await robustFetch(`${API_BASE_URL}/sales`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(saleData)
                 });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    // 2. Generar PDF
-                    const { pdfBlob, fileName } = generateSalePDF(result.data.saleId, saleData);
-                    
-                    // 3. Mostrar opciones para compartir/descargar
-                    showShareOptions(pdfBlob, fileName, 'Venta Completada', 'Venta guardada y PDF generado. ¿Qué deseas hacer?');
-                    
-                    // 4. Actualizar datos locales
-                    await Promise.all([fetchProducts(), fetchSales()]);
 
-                    // 5. Limpiar UI
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    const { pdfBlob, fileName } = generateSalePDF(result.data.saleId, saleData);
+                    showShareOptions(pdfBlob, fileName, 'Venta Completada', 'Venta guardada y PDF generado. ¿Qué deseas hacer?');
+
+                    await Promise.all([fetchProducts(), fetchSales()]); // Recargar productos (stock actualizado) y ventas
+
                     cart = [];
                     renderCart();
                     document.getElementById('customer-form').reset();
@@ -858,7 +873,9 @@
         }
 
         function generateSalePDF(saleId, saleData) {
-            return generateDocumentPDF('Nota de Venta', `Nr: ${saleId}`, saleData);
+            // Asegurarse de que 'items' sea un array antes de pasarlo
+            const validSaleData = { ...saleData, items: Array.isArray(saleData.items) ? saleData.items : [] };
+            return generateDocumentPDF('Nota de Venta', `Nr: ${saleId}`, validSaleData);
         }
 
         function handleGenerateQuote() {
@@ -868,38 +885,40 @@
             }
 
             const quoteData = {
-                customer: { 
-                    name: document.getElementById('customer-name').value, 
-                    contact: document.getElementById('customer-contact').value, 
-                    id: document.getElementById('customer-id').value 
+                customer: {
+                    name: document.getElementById('customer-name').value,
+                    contact: document.getElementById('customer-contact').value,
+                    id: document.getElementById('customer-id').value
                 },
-                items: cart.map(item => ({ 
-                    Nombre: item.nombre, 
-                    SKU: item.sku, 
-                    cantidad: item.quantity, 
-                    precio: item.customPrice 
+                items: cart.map(item => ({
+                    Nombre: item.nombre,
+                    SKU: item.sku,
+                    cantidad: item.quantity,
+                    precio: item.customPrice
                 })),
                 total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0)
             };
-            
+
             const { pdfBlob, fileName } = generateQuotePDF(quoteData);
             showShareOptions(pdfBlob, fileName, 'Cotización Generada', 'El PDF de la cotización ha sido generado. ¿Qué deseas hacer?');
         }
 
         function generateQuotePDF(quoteData) {
-            return generateDocumentPDF('Cotización', 'Válido por 24hrs.', quoteData, 'Cotizacion');
+             // Asegurarse de que 'items' sea un array antes de pasarlo
+             const validQuoteData = { ...quoteData, items: Array.isArray(quoteData.items) ? quoteData.items : [] };
+            return generateDocumentPDF('Cotización', 'Válido por 24hrs.', validQuoteData, 'Cotizacion');
         }
 
         function generateDocumentPDF(docType, docIdentifier, data, filePrefix = 'Nota_Venta') {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
+
             const pageW = doc.internal.pageSize.getWidth();
             const margin = 14;
             const headerW = pageW - (margin * 2);
             const headerH = 30;
-            const r = 3; 
-            
+            const r = 3;
+
             doc.setFillColor('#303c54');
             doc.roundedRect(margin, margin, headerW, headerH, r, r, 'F');
             doc.setTextColor('#FFFFFF');
@@ -912,7 +931,7 @@
                 doc.addImage(preloadedLogo.dataURL, 'PNG', margin + 5, logoY, logoW, logoH, undefined, 'FAST');
                 textStartX = margin + logoW + 8;
             }
-            
+
             doc.setFontSize(17.6);
             doc.text("ArelyShop", textStartX, margin + 15);
             doc.setFontSize(8.8);
@@ -929,22 +948,27 @@
             doc.setFontSize(12);
             doc.text("Datos del Cliente:", margin, startY);
             doc.setFontSize(10);
-            
+
             const customerInfo = `Nombre: ${data.customer.name || 'N/A'}   |   Contacto: ${data.customer.contact || 'N/A'}   |   NIT/CI: ${data.customer.id || 'N/A'}`;
             doc.text(customerInfo, margin, startY + 8);
-            
+
             const tableColumn = ["Cant.", "Descripción", "P. Unit.", "Subtotal"];
             const tableRows = [];
-            data.items.forEach(item => {
-                const description = `${item.Nombre}\n(SKU: ${item.SKU || 'N/A'})`;
-                const itemData = [ item.cantidad, description, `Bs ${item.precio.toFixed(2)}`, `Bs ${(item.cantidad * item.precio).toFixed(2)}` ];
-                tableRows.push(itemData);
-            });
+            // Asegurarse de que data.items es un array
+            if (Array.isArray(data.items)) {
+                data.items.forEach(item => {
+                    const description = `${item.Nombre}\n(SKU: ${item.SKU || 'N/A'})`;
+                    const itemData = [ item.cantidad, description, `Bs ${item.precio.toFixed(2)}`, `Bs ${(item.cantidad * item.precio).toFixed(2)}` ];
+                    tableRows.push(itemData);
+                });
+            } else {
+                 console.error("data.items no es un array en generateDocumentPDF:", data.items);
+            }
 
             doc.autoTable({
                 head: [tableColumn],
-                body: tableRows, 
-                startY: startY + 15, 
+                body: tableRows,
+                startY: startY + 15,
                 margin: { left: margin, right: margin },
                 headStyles: { fillColor: '#cdcdcd', textColor: '#000000' },
                 styles: { cellPadding: 2, fontSize: 9 },
@@ -954,17 +978,17 @@
                     }
                 }
             });
-            
+
             const finalY = doc.autoTable.previous.finalY;
             doc.setFontSize(14);
             doc.text("TOTAL:", margin, finalY + 15);
             doc.text(`Bs ${data.total.toFixed(2)}`, pageW - margin, finalY + 15, { align: 'right' });
-            
+
             doc.setFontSize(10);
             const thankYouMessage = filePrefix === 'Cotizacion' ? "¡Gracias por su interés!" : "¡Gracias por su compra!";
             doc.text(thankYouMessage, pageW / 2, finalY + 30, { align: 'center' });
             doc.text("Visita nuestra tienda online: www.arelyshop.com", pageW / 2, finalY + 35, { align: 'center' });
-            
+
             if (preloadedPdfQr) {
                 const qrSize = 25;
                 const qrX = (pageW - qrSize) / 2;
@@ -980,17 +1004,17 @@
             } else {
                 fileName = `${filePrefix}_${customerName}.pdf`;
             }
-            
+
             const pdfBlob = doc.output('blob');
             return { pdfBlob, fileName };
         }
-        
+
         function renderSalesResults() {
             const searchTerm = document.getElementById('search-sales-input').value.toLowerCase();
             const container = document.getElementById('sales-results-container');
             container.innerHTML = '';
-            
-            const filteredSales = sales.filter(s => 
+
+            const filteredSales = sales.filter(s =>
                 s.saleId?.toLowerCase().includes(searchTerm) ||
                 s.nombreCliente?.toLowerCase().includes(searchTerm) ||
                 s.contacto?.toString().toLowerCase().includes(searchTerm) ||
@@ -1002,13 +1026,16 @@
                 return;
             }
 
+            // Ordenar por fecha descendente antes de renderizar
+            filteredSales.sort((a, b) => new Date(b.fechaVenta) - new Date(a.fechaVenta));
+
             filteredSales.forEach(sale => {
                 const isAnnulled = sale.estado === 'Anulada';
                 const statusText = isAnnulled ? 'Anulada' : 'Completada';
                 const statusColor = isAnnulled ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                 const card = document.createElement('div');
                 card.className = `p-4 border rounded-lg ${isAnnulled ? 'bg-gray-200 opacity-70' : 'bg-white'}`;
-                
+
                 let productsHtml = '<ul>';
                 try {
                     const saleProducts = (typeof sale.productosVendidos === 'string') ? JSON.parse(sale.productosVendidos) : sale.productosVendidos;
@@ -1020,9 +1047,9 @@
                     }
                 } catch(e) { productsHtml += '<li>Error al leer productos</li>'; }
                 productsHtml += '</ul>';
-                
+
                 const totalVenta = sale.totalVenta !== undefined ? parseFloat(sale.totalVenta).toFixed(2) : 'N/A';
-                
+
                 card.innerHTML = `
                     <div class="flex flex-wrap justify-between items-start gap-2">
                         <div>
@@ -1035,8 +1062,7 @@
                              <span class="font-semibold text-sm px-2 py-1 rounded-lg ${statusColor}">${statusText}</span>
                              <div class="mt-2 flex space-x-2 justify-end">
                                 <button onclick="reprintSale('${sale.saleId}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">Reimprimir</button>
-                                <!-- Lógica de anulación no implementada en backend aún -->
-                                <!-- <button onclick="openAnnulConfirmModal('${sale.saleId}')" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 disabled:bg-gray-400" ${isAnnulled ? 'disabled' : ''}>Anular</button> -->
+                                <button onclick="openAnnulConfirmModal('${sale.saleId}')" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 disabled:bg-gray-400" ${isAnnulled ? 'disabled' : ''}>Anular</button>
                              </div>
                         </div>
                     </div>
@@ -1045,6 +1071,51 @@
                 container.appendChild(card);
             });
         }
+
+        // --- Funciones de Anulación ---
+        function openAnnulConfirmModal(saleId) {
+            saleIdToAnnul = saleId;
+            const sale = sales.find(s => s.saleId === saleId);
+            if (!sale) return;
+            document.getElementById('annul-modal-text').textContent = `¿Estás seguro de que quieres anular la venta ${saleId}? Esta acción no se puede deshacer y el stock de los productos involucrados será restaurado.`;
+            document.getElementById('annul-confirm-modal').classList.remove('hidden');
+        }
+
+        async function annulSaleInBackend(saleId) {
+            const button = document.getElementById('confirm-annul-btn');
+            const buttonText = document.getElementById('annul-button-text');
+            const loader = document.getElementById('annul-loader');
+            buttonText.classList.add('hidden');
+            loader.classList.remove('hidden');
+            button.disabled = true;
+
+            try {
+                const response = await robustFetch(`${API_BASE_URL}/sales`, { // Usar PUT al endpoint principal de sales
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ saleId: saleId }) // Enviar solo el ID
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showNotification(result.message, 'success');
+                    await Promise.all([fetchSales(), fetchProducts()]); // Recargar ventas y productos
+                    renderSalesResults(); // Actualizar la lista de ventas
+                } else {
+                    throw new Error(result.message || 'Error desconocido del servidor.');
+                }
+            } catch (error) {
+                console.error('Error al anular la venta:', error);
+                showNotification(`Error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('annul-confirm-modal').classList.add('hidden');
+                buttonText.classList.remove('hidden');
+                loader.classList.add('hidden');
+                button.disabled = false;
+                saleIdToAnnul = null; // Limpiar el ID
+            }
+        }
+        // --- Fin Funciones de Anulación ---
+
 
         function reprintSale(saleId) {
             const saleToReprint = sales.find(s => s.saleId === saleId);
@@ -1055,7 +1126,7 @@
 
             try {
                 const saleItems = (typeof saleToReprint.productosVendidos === 'string') ? JSON.parse(saleToReprint.productosVendidos) : saleToReprint.productosVendidos;
-                
+
                 const saleData = {
                     customer: {
                         name: saleToReprint.nombreCliente,
@@ -1080,16 +1151,16 @@
             document.getElementById('modalProductCode').textContent = product.codigoBarras || 'N/A';
             document.getElementById('modalProductBranch').textContent = product.ciudadSucursal || 'N/A';
             document.getElementById('modalProductStock').textContent = product.cantidad || '0';
-            
+
             const salePrice = parseFloat(product.precioVenta || 0).toFixed(2);
             const discountPrice = parseFloat(product.precioDescuento || 0);
             const purchasePrice = parseFloat(product.precioCompra || 0).toFixed(2);
             const wholesalePrice = parseFloat(product.precioMayoreo || 0).toFixed(2);
-            
+
             document.getElementById('modalProductPrice').textContent = `Bs. ${salePrice}`;
             document.getElementById('modalProductPurchasePrice').textContent = `Bs. ${purchasePrice}`;
             document.getElementById('modalProductWholesalePrice').textContent = `Bs. ${wholesalePrice}`;
-            
+
             const discountContainer = document.getElementById('discountPriceContainer');
             if (discountPrice > 0) {
                 document.getElementById('modalProductDiscountPrice').textContent = `Bs. ${discountPrice.toFixed(2)}`;
@@ -1129,7 +1200,7 @@
                 document.getElementById('qrCodeModal').classList.remove('hidden');
             }
         }
-        
+
         function showShareOptions(pdfBlob, fileName, title, text) {
             currentPdfBlob = pdfBlob;
             currentPdfFileName = fileName;
@@ -1188,7 +1259,7 @@
 
         function startScanner(targetInputId) {
             document.getElementById('scanner-modal').classList.remove('hidden');
-            
+
             const onScanSuccess = (decodedText, decodedResult) => {
                 const targetInput = document.getElementById(targetInputId);
                 targetInput.value = decodedText;
@@ -1201,7 +1272,7 @@
             };
 
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
+
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (error) => {})
                 .catch(err => {
                     console.error("No se pudo iniciar el escáner.", err);
