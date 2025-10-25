@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema POS - ArelyShop</title>
+    <link rel="icon" type="image/svg+xml" href="https://www.svgrepo.com/show/373594/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- PDF Generation Libraries (kept for quotes/reprint) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <!-- Barcode Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        html {
+            overflow-y: scroll;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3b82f6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Tab Styling */
+        .tab-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem 0.25rem;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .tab-button svg {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 0.25rem;
+        }
+
+        @media (min-width: 640px) {
+            .tab-button {
+                flex-direction: row;
+                font-size: 0.875rem;
+                line-height: 1.25rem;
+                padding: 0.5rem 0.75rem;
+                flex-grow: 0;
+            }
+            .tab-button svg {
+                margin-bottom: 0;
+                margin-right: 0.5rem;
+            }
+        }
+
+        .tab-inactive { border-color: transparent; color: #6b7280; }
+        .tab-inactive svg { fill: #6b7280; }
+
+        #tab-pos.tab-active { border-color: #2563eb; color: #2563eb; font-weight: 600; }
+        #tab-pos.tab-active svg { fill: #2563eb; }
+
+        #tab-sales-registry.tab-active { border-color: #16a34a; color: #16a34a; font-weight: 600; }
+        #tab-sales-registry.tab-active svg { fill: #16a34a; }
+
+        .tab-content { display: none; }
+        .copy-btn { background: none; border: none; cursor: pointer; margin-left: 8px; color: #6b7280; }
+        .copy-btn:hover { color: #2c3c53; }
+        #scanner-modal #reader {
+            width: 100%;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        /* Notification Banner */
+        #notification-banner {
+            transition: transform 0.5s ease-in-out;
+            transform: translateY(-100%);
+        }
+        /* Summary Modal Scrollbar */
+        #summary-products-list::-webkit-scrollbar { width: 6px; }
+        #summary-products-list::-webkit-scrollbar-track { background: #e5e7eb; }
+        #summary-products-list::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 3px; }
+        #summary-products-list::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Login Screen -->
+    <div id="login-container" class="flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+        <div class="max-w-md w-full space-y-8 p-10 rounded-xl shadow-lg border border-gray-700" style="background-color: #202c34;">
+            <div>
+                <img class="mx-auto h-10 sm:h-12 w-auto" src="/images/logo-escritorio.svg" alt="ArelyShop">
+                <div class="flex justify-center mt-4">
+                     <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#e3e3e3"><path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z"/></svg>
+                </div>
+                <h2 class="mt-4 text-center text-3xl font-extrabold text-gray-100">
+                    Iniciar sesión
+                </h2>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6">
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <div>
+                        <label for="username" class="sr-only">Usuario</label>
+                        <input id="username" name="username" type="text" autocomplete="username" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Usuario">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">Contraseña</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Contraseña">
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" id="login-button" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <span id="login-button-text">Ingresar</span>
+                        <div id="login-loader" class="loader hidden"></div>
+                    </button>
+                </div>
+                <p id="error-message" class="mt-2 text-center text-sm text-red-600"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Banner -->
+    <div id="notification-banner" class="fixed top-0 left-0 right-0 p-4 text-white text-center z-50">
+        <span id="notification-message"></span>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container" class="hidden flex-col min-h-screen">
+        <header class="bg-gray-800 text-white shadow-md">
+            <div class="container mx-auto p-4 flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <img src="/images/logo-escritorio.svg" alt="Logo ArelyShop" class="h-8 sm:h-10">
+                    <h1 class="text-xl font-bold hidden sm:block">Punto de Venta</h1>
+                </div>
+                 <div class="flex items-center space-x-4">
+                    <div id="user-info" class="text-right">
+                         <p class="font-semibold text-sm" id="user-fullname"></p>
+                         <p class="text-xs text-gray-400" id="user-role"></p>
+                    </div>
+                    <button id="logout-button" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3" class="mr-1"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow">
+            <div class="container mx-auto p-4 md:p-8">
+                <!-- Tab Navigation -->
+                <div class="mb-8 border-b border-gray-200">
+                    <nav class="flex justify-center space-x-0 sm:space-x-4" aria-label="Tabs">
+                        <button id="tab-pos" class="text-sm font-medium border-b-2 tab-active tab-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
+                            <span>Punto de Venta</span>
+                        </button>
+                        <button id="tab-sales-registry" class="text-sm font-medium border-b-2 tab-inactive tab-button">
+                           <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M200-120q-33 0-56.5-23.5T120-200v-640h80v640h640v80H200Zm40-120v-360h160v360H240Zm200 0v-560h160v560H440Zm200 0v-200h160v200H640Z"/></svg>
+                            <span>Registro de Ventas</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab: Point of Sale -->
+                <div id="content-pos" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-lg overflow-hidden">
+                            <div class="p-6 flex justify-between items-center" style="background-color: #2c3c53; color: white;">
+                                <div class="flex items-center">
+                                    <img src="/images/logo-escritorio.svg" alt="Logo ArelyShop" class="h-10 sm:h-12 mr-4" onerror="this.onerror=null; this.src='https://placehold.co/200x50/e2e8f0/94a3b8?text=ArelyShop';">
+                                    <div class="hidden md:block">
+                                        <h2 class="font-bold text-xl">ArelyShop</h2>
+                                        <p class="text-xs">Santa Cruz de la Sierra, Bolivia</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <h3 class="font-bold text-lg">Nota de Venta</h3>
+                                    <p class="text-sm">Nr: <span id="current-sale-id">--</span></p>
+                                    <p class="text-sm">Fecha: <span id="current-date">--/--/----</span></p>
+                                </div>
+                            </div>
+
+                            <div class="p-6">
+                                <div class="relative mb-4">
+                                    <label for="search-product" class="block text-sm font-medium text-gray-700 mb-1">Buscar Producto (Nombre, SKU o Código de Barras)</label>
+                                    <div class="relative flex items-center">
+                                        <input type="text" id="search-product" placeholder="Escanear código o escribir para buscar..." class="w-full px-4 py-2 border border-gray-300 rounded-lg pr-12">
+                                        <button id="scan-pos-btn" class="absolute right-0 top-0 h-full px-3 bg-gray-700 text-white rounded-r-lg hover:bg-gray-800 sm:hidden">
+                                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
+                                        </button>
+                                    </div>
+                                    <div id="search-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-60 overflow-y-auto hidden"></div>
+                                </div>
+                                <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-3">Carrito</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-2 py-2"></th> <!-- Info button column -->
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                                                <th class="px-2 py-2"></th> <!-- Delete button column -->
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cart-items" class="bg-white divide-y divide-gray-200">
+                                            <tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col space-y-8">
+                            <div class="bg-white rounded-xl shadow-lg p-6 h-fit">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Detalles del Cliente</h3>
+                                <form id="customer-form" class="space-y-4">
+                                    <div><label for="customer-name" class="block text-sm font-medium text-gray-700">Nombre</label><input type="text" id="customer-name" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                                    <div><label for="customer-contact" class="block text-sm font-medium text-gray-700">Contacto</label><input type="text" id="customer-contact" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                                    <div><label for="customer-id" class="block text-sm font-medium text-gray-700">NIT/CI</label><input type="text" id="customer-id" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                                </form>
+                                <div class="border-t border-gray-200 mt-6 pt-6">
+                                    <div class="flex justify-between items-center text-2xl font-bold text-gray-800"><span>TOTAL:</span><span id="total-amount">Bs 0.00</span></div>
+                                    <button id="complete-sale-button" class="mt-6 w-full inline-flex items-center justify-center px-8 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-200 shadow-lg disabled:bg-gray-400">
+                                        <span id="sale-button-text" class="inline-flex items-center justify-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" class="mr-2"><path d="m691-150 139-138-42-42-97 95-39-39-42 43 81 81ZM240-600h480v-80H240v80ZM720-40q-83 0-141.5-58.5T520-240q0-83 58.5-141.5T720-440q83 0 141.5 58.5T920-240q0 83-58.5 141.5T720-40ZM120-80v-680q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v267q-19-9-39-15t-41-9v-243H200v562h243q5 31 15.5 59T486-86l-6 6-60-60-60 60-60-60-60 60-60-60-60 60Zm120-200h203q3-21 9-41t15-39H240v80Zm0-160h284q38-37 88.5-58.5T720-520H240v80Zm-40 242v-562 562Z"/></svg>
+                                            Completar Venta
+                                        </span>
+                                        <div id="sale-loader" class="loader hidden"></div>
+                                    </button>
+                                    <button id="generate-quote-button" class="mt-2 w-full inline-flex items-center justify-center px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-200 shadow-lg disabled:bg-gray-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" class="mr-2"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560h600v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-600H320v480h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h360v80H360Zm0 120v-80h360v80H360ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm0 0h-40 400-360Z"/></svg>
+                                        Solo Cotización
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- QR Code Section -->
+                            <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                                <h3 class="text-xl font-bold text-gray-800 mb-4">Escanea y paga</h3>
+                                <img id="pos-qr-code" src="/images/qr-pago.webp" alt="Código QR para pago" class="w-full h-auto max-w-xs mx-auto rounded-lg cursor-pointer" onclick="showQrModal()" onerror="this.onerror=null; this.src='https://placehold.co/192x192/e2e8f0/94a3b8?text=QR';">
+                            </div>
+                            <!-- Go to Online Store Button (Mobile Only) -->
+                            <div class="lg:hidden">
+                                <a href="https://arelyshop.com/all-products" target="_blank" class="w-full inline-flex items-center justify-center px-8 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-800 transition duration-200 shadow-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3" class="mr-2"><path d="M841-518v318q0 33-23.5 56.5T761-120H201q-33 0-56.5-23.5T121-200v-318q-23-21-35.5-54t-.5-72l42-136q8-26 28.5-43t47.5-17h556q27 0 47 16.5t29 43.5l42 136q12 39-.5 71T841-518Zm-272-42q27 0 41-18.5t11-41.5l-22-140h-78v148q0 21 14 36.5t34 15.5Zm-180 0q23 0 37.5-15.5T441-612v-148h-78l-22 140q-4 24 10.5 42t37.5 18Zm-178 0q18 0 31.5-13t16.5-33l22-154h-78l-40 134q-6 20 6.5 43t41.5 23Zm540 0q29 0 42-23t6-43l-42-134h-76l22 154q3 20 16.5 33t31.5 13ZM201-200h560v-282q-5 2-6.5 2H751q-27 0-47.5-9T663-518q-18 18-41 28t-49 10q-27 0-50.5-10T481-518q-17 18-39.5 28T393-480q-29 0-52.5-10T299-518q-21 21-41.5 29.5T211-480h-4.5q-2.5 0-5.5-2v282Zm560 0H201h560Z"/></svg>
+                                    Ir a Tienda Online
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Sales Registry -->
+                <div id="content-sales-registry" class="tab-content">
+                    <div class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-lg p-6">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">Registro de Ventas</h2>
+                        <input type="text" id="search-sales-input" placeholder="Buscar por Nro. Venta, Cliente, Contacto o Vendedor..." class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-6">
+                        <div id="sales-results-container" class="space-y-4 max-h-[70vh] overflow-y-auto">
+                            <!-- Sales results will be injected here -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <footer class="bg-gray-200 text-center p-4">
+            <p class="text-sm text-gray-600">&copy; <span id="current-year"></span> ArelyShop. Todos los derechos reservados.</p>
+        </footer>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div id="productDetailModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-3xl w-full relative flex flex-col md:flex-row gap-6 max-h-[90vh]">
+            <button id="closeProductModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-3xl font-bold z-10">&times;</button>
+            <div class="md:w-1/2 flex items-center justify-center bg-gray-100 rounded-lg">
+                 <img id="modalProductImage" src="" alt="Vista detallada del producto" class="w-full h-auto max-h-[80vh] object-contain rounded-lg" onerror="this.onerror=null; this.src='https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen';">
+            </div>
+            <div class="md:w-1/2 flex flex-col py-4 overflow-y-auto">
+                <h2 id="modalProductName" class="text-2xl font-bold text-gray-900 mb-4"></h2>
+                <div class="space-y-3 text-gray-700 text-base">
+                    <p class="flex items-center justify-between"><strong>SKU:</strong> <span class="bg-gray-100 px-2 py-1 rounded"><span id="modalProductSku"></span> <button class="copy-btn" data-copy-target="modalProductSku" title="Copiar SKU"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"></path><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"></path></svg></button></span></p>
+                    <p class="flex items-center justify-between"><strong>Código:</strong> <span class="bg-gray-100 px-2 py-1 rounded"><span id="modalProductCode"></span> <button class="copy-btn" data-copy-target="modalProductCode" title="Copiar Código"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"></path><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"></path></svg></button></span></p>
+                    <p><strong>Sucursal:</strong> <span id="modalProductBranch" class="font-semibold"></span></p>
+                    <p><strong>Stock:</strong> <span id="modalProductStock" class="font-semibold"></span></p>
+                    <div class="mt-4 pt-4 border-t space-y-2">
+                        <p class="flex justify-between"><strong>Precio Regular:</strong> <span id="modalProductPrice" class="font-semibold text-lg text-gray-600"></span></p>
+                        <p id="discountPriceContainer" class="flex justify-between"><strong>Precio Descuento:</strong> <span id="modalProductDiscountPrice" class="font-semibold text-lg text-blue-600"></span></p>
+                        <p class="flex justify-between text-sm"><strong>Precio Compra:</strong> <span id="modalProductPurchasePrice" class="font-semibold"></span></p>
+                        <p class="flex justify-between text-sm"><strong>Precio Mayoreo:</strong> <span id="modalProductWholesalePrice" class="font-semibold"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qrCodeModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white p-4 rounded-lg shadow-xl max-w-sm w-full relative">
+            <button id="closeQrModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-3xl font-bold z-10">&times;</button>
+            <img id="modalQrImage" src="" alt="Código QR para pago ampliado" class="w-full h-auto rounded-lg">
+        </div>
+    </div>
+
+    <!-- Scanner Modal -->
+    <div id="scanner-modal" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white p-4 rounded-lg shadow-xl w-full max-w-md relative">
+            <h3 class="text-lg font-bold text-center mb-2">Escanear Código de Barras</h3>
+            <div id="reader" class="w-full"></div>
+            <button id="close-scanner-btn" class="mt-4 w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <h3 class="text-xl font-bold text-gray-800 mb-4" id="share-modal-title">Venta Completada</h3>
+            <p class="text-gray-600 mb-6" id="share-modal-text">El PDF de la nota de venta ha sido generado. ¿Qué deseas hacer?</p>
+            <div class="space-y-3">
+                <button id="download-pdf-btn" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition duration-200 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" class="mr-2"><path d="m720-120 160-160-56-56-64 64v-167h-80v167l-64-64-56 56 160 160ZM560 0v-80h320V0H560ZM240-160q-33 0-56.5-23.5T160-240v-560q0-33 23.5-56.5T240-880h280l240 240v121h-80v-81H480v-200H240v560h240v80H240Zm0-80v-560 560Z"/></svg>
+                    Descargar PDF
+                </button>
+                <button id="share-pdf-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center">
+                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#FFFFFF" class="mr-2"><path d="m680-160 120-120-28-28-72 72v-164h-40v164l-72-72-28 28 120 120Zm-560 0v-640l572 240h-12q-35 0-66 8t-60 22L200-680v140l240 60-240 60v140l216-92q-8 23-12 45.5t-4 46.5v2L120-160Zm560 80q-83 0-141.5-58.5T480-280q0-83 58.5-141.5T680-480q83 0 141.5 58.5T880-280q0 83-58.5 141.5T680-80ZM200-372v-308 400-92Z"/></svg>
+                    Compartir
+                </button>
+            </div>
+             <button id="close-share-modal" class="mt-6 text-sm text-gray-500 hover:text-gray-800">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Annul Sale Confirmation Modal -->
+    <div id="annul-confirm-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Anular Venta</h3>
+                <div class="mt-2 px-7 py-3"><p id="annul-modal-text" class="text-sm text-gray-500">¿Estás seguro? Esta acción no se puede deshacer y el stock será restaurado.</p></div>
+                <div class="items-center px-4 py-3">
+                    <button id="confirm-annul-btn" class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-lg w-auto shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">
+                        <span id="annul-button-text">Confirmar Anulación</span>
+                        <div id="annul-loader" class="loader hidden mx-auto"></div>
+                    </button>
+                    <button id="cancel-annul-btn" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-lg w-auto ml-2 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Viewer Modal REMOVED -->
+    <!-- <div id="pdf-viewer-modal" ...> -->
+        <!-- ... -->
+    <!-- </div> -->
+
+    <!-- Sale Summary Modal (Nuevo) -->
+    <div id="sale-summary-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl relative max-h-[90vh] flex flex-col">
+             <button id="close-summary-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-3xl font-bold z-10">&times;</button>
+             <h3 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2" id="summary-modal-title">Resumen de Venta</h3>
+             <div class="text-sm text-gray-700 space-y-2 mb-4">
+                <p><strong>Cliente:</strong> <span id="summary-customer-name"></span></p>
+                <p><strong>Contacto:</strong> <span id="summary-customer-contact"></span> | <strong>NIT/CI:</strong> <span id="summary-customer-id"></span></p>
+                <p><strong>Fecha:</strong> <span id="summary-sale-date"></span></p>
+                <p><strong>Vendido por:</strong> <span id="summary-seller-name" class="font-semibold"></span></p>
+             </div>
+             <h4 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Productos Vendidos</h4>
+             <div id="summary-products-list" class="flex-grow overflow-y-auto border rounded-lg p-3 bg-gray-50 mb-4 max-h-60">
+                 <!-- Product list will be injected here -->
+                 <p class="text-gray-500">Cargando productos...</p>
+             </div>
+             <div class="mt-auto pt-4 border-t text-right">
+                 <p class="text-xl font-bold text-blue-600">Total Venta: Bs <span id="summary-total-amount">0.00</span></p>
+             </div>
+        </div>
+    </div>
+
+    <!-- Link to the external script file -->
+    <script src="script.js" defer></script>
+</body>
+</html>
+
