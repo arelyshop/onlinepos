@@ -1,0 +1,239 @@
+<!-- Promotional Banner -->
+<div id="promo-banner" class="bg-[#4F07C8] p-1 relative text-center z-50">
+    <a href="#">
+         <picture>
+            <!-- Asegúrate que estas imágenes existan en /images/ -->
+            <source media="(max-width: 767px)" srcset="/images/banner-movil.webp">
+            <source media="(min-width: 768px)" srcset="/images/banner-escritorio.webp">
+            <img src="/images/banner-escritorio.webp" alt="aniversario" loading="lazy" class="inline-block h-8 md:h-10 w-auto">
+        </picture>
+    </a>
+    <button onclick="document.getElementById('promo-banner').style.display='none'" class="absolute top-1/2 right-4 -translate-y-1/2 text-white text-2xl font-bold">&times;</button>
+</div>
+
+<!-- Header Section -->
+<header class="bg-white shadow-md sticky top-0 z-50">
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-black text-white p-2">
+        <div class="container mx-auto">
+            <div class="flex items-center justify-between space-x-2">
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="flex flex-col items-center justify-center p-1">
+                    <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M4 6H20M4 12H14M4 18H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    <span class="text-[0.54rem] font-semibold -mt-1">MENÚ</span>
+                </button>
+
+                <!-- Logo and Search Bar -->
+                <div class="flex-1 flex items-center space-x-3">
+                    <a href="index.html" class="h-9 flex-shrink-0">
+                       <!-- Asegúrate que esta imagen exista en /images/ -->
+                       <img src="/images/logo-movil.svg" alt="Arelyshop" class="h-full w-auto">
+                    </a>
+                    <div class="relative flex-1" id="mobile-search-container">
+                        <input id="mobile-search-input" class="w-full pl-8 pr-4 py-2 text-sm text-gray-900 rounded-full focus:outline-none" autocomplete="off" type="text" placeholder="¿Qué estás buscando?" enterkeyhint="search">
+                        <div class="absolute left-2 top-1/2 -translate-y-1/2">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                         <!-- Search results popup for mobile -->
+                        <div id="mobile-search-results" class="search-results-container absolute top-full mt-2 w-full bg-white rounded-lg shadow-lg hidden z-[60] max-h-80 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- Mobile Cart -->
+                <button id="mobile-cart-btn" class="relative p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 -960 960 960" fill="currentColor"><path d="M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm134 280h280-280Z"/></svg>
+                    <span id="mobile-cart-count" class="absolute -top-1 -right-1 bg-[#25d366] text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Desktop Header -->
+    <div class="hidden md:block bg-black text-white">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-3">
+                <!-- Desktop Logo -->
+                <div class="flex items-center space-x-4">
+                    <a href="index.html">
+                        <!-- Asegúrate que esta imagen exista en /images/ -->
+                        <img src="/images/logo-escritorio.svg" alt="Arelyshop" class="h-10 w-auto">
+                    </a>
+                </div>
+
+                <!-- Desktop Search Bar -->
+                <div class="flex-1 max-w-2xl mx-4 relative" id="desktop-search-container">
+                    <div class="relative">
+                        <input type="text" id="desktop-search-input" placeholder="¿Qué estás buscando?" class="w-full pl-10 pr-4 py-2 text-gray-900 rounded-full focus:outline-none focus:ring-2 focus:ring-white" autocomplete="off">
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                    </div>
+                    <!-- Search results popup for desktop -->
+                    <div id="desktop-search-results" class="search-results-container absolute top-full mt-2 w-full bg-white rounded-lg shadow-lg hidden z-[60] max-h-96 overflow-y-auto"></div>
+                </div>
+
+                <!-- Desktop Icons -->
+                <div class="flex items-center space-x-4">
+                    <a href="https://www.google.com/maps/place/17%C2%B049'00.4%22S+63%C2%B010'18.8%22W" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-2 hover:opacity-80 transition">
+                        <!-- Asegúrate que estas imágenes existan en /images/ -->
+                        <img src="/images/location-icon.svg" alt="Ubicación" class="h-8 w-8">
+                        <div class="text-left text-xs">
+                            <p>Ubicación de</p>
+                            <p class="font-semibold text-sm">Nuestra Tienda</p>
+                        </div>
+                    </a>
+                    <a href="https://wa.me/59167500044" target="_blank" rel="noopener noreferrer" class="flex items-center space-x-2 hover:opacity-80 transition">
+                       <img src="/images/whatsapp-icon.svg" alt="WhatsApp" class="h-8 w-8">
+                        <div class="text-left text-xs">
+                            <p>Contáctanos</p>
+                            <p class="font-semibold text-sm">por WhatsApp!</p>
+                        </div>
+                    </a>
+                    <button id="desktop-cart-btn" class="relative flex items-center space-x-2 hover:opacity-80 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 -960 960 960" fill="currentColor"><path d="M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm134 280h280-280Z"/></svg>
+                        <span id="desktop-cart-count" class="absolute -top-1 -right-1 bg-[#25d366] text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desktop Static Nav Bar -->
+    <div class="hidden md:block bg-white shadow-md">
+        <div class="container mx-auto">
+            <div class="md:w-[85%] md:mx-auto">
+                <nav class="grid grid-cols-6 gap-2 text-center items-center py-0.5">
+                    <a href="index.html" class="block py-1 px-2 text-gray-800 font-semibold hover:bg-gray-100 rounded-lg transition-colors">Inicio</a>
+                    <a href="all-products.html" class="block py-1 px-2 text-gray-800 font-semibold hover:bg-gray-100 rounded-lg transition-colors">Ver Catálogo</a>
+
+                    <!-- Categories Dropdown -->
+                    <div class="relative" id="desktop-categories-dropdown-container">
+                        <button id="desktop-categories-btn" class="flex items-center justify-center w-full py-1 px-2 text-gray-800 font-semibold hover:bg-gray-100 rounded-lg transition-colors">
+                            <span>Categorías</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1F2937"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+                        </button>
+                        <div id="desktop-categories-submenu" class="absolute left-0 top-full pt-2 w-48 bg-white rounded-md shadow-lg hidden z-50 text-left">
+                            <!-- Dynamic categories will be injected here -->
+                            <p class="px-4 py-2 text-xs text-gray-400">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <!-- Marcas Dropdown -->
+                    <div class="relative" id="desktop-marcas-dropdown-container">
+                        <button id="desktop-marcas-btn" class="flex items-center justify-center w-full py-1 px-2 text-gray-800 font-semibold hover:bg-gray-100 rounded-lg transition-colors">
+                            <span>Marcas</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1F2937"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+                        </button>
+                        <div id="desktop-marcas-submenu" class="absolute left-0 top-full pt-2 w-48 bg-white rounded-md shadow-lg hidden z-50 text-left">
+                            <!-- Dynamic brands will be injected here -->
+                             <p class="px-4 py-2 text-xs text-gray-400">Cargando...</p>
+                        </div>
+                    </div>
+
+                    <a href="#" class="flex items-center justify-center py-1 px-2 text-red-600 font-semibold hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg class="w-5 h-5 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M9.5924 3.20027C9.34888 3.4078 9.22711 3.51158 9.09706 3.59874C8.79896 3.79854 8.46417 3.93721 8.1121 4.00672C7.95851 4.03705 7.79903 4.04977 7.48008 4.07522C6.6787 4.13918 6.278 4.17115 5.94371 4.28923C5.17051 4.56233 4.56233 5.17051 4.28923 5.94371C4.17115 6.278 4.13918 6.6787 4.07522 7.48008C4.04977 7.79903 4.03705 7.95851 4.00672 8.1121C3.93721 8.46417 3.79854 8.79896 3.59874 9.09706C3.51158 9.22711 3.40781 9.34887 3.20027 9.5924C2.67883 10.2043 2.4181 10.5102 2.26522 10.8301C1.91159 11.57 1.91159 12.43 2.26522 13.1699C2.41811 13.4898 2.67883 13.7957 3.20027 14.4076C3.40778 14.6511 3.51158 14.7729 3.59874 14.9029C3.79854 15.201 3.93721 15.5358 4.00672 15.8879C4.03705 16.0415 4.04977 16.201 4.07522 16.5199C4.13918 17.3213 4.17115 17.722 4.28923 18.0563C4.56233 18.8295 5.17051 19.4377 5.94371 19.7108C6.278 19.8288 6.6787 19.8608 7.48008 19.9248C7.79903 19.9502 7.95851 19.963 8.1121 19.9933C8.46417 20.0628 8.79896 20.2015 9.09706 20.4013C9.22711 20.4884 9.34887 20.5922 9.5924 20.7997C10.2043 21.3212 10.5102 21.5819 10.8301 21.7348C11.57 22.0884 12.43 22.0884 13.1699 21.7348C13.4898 21.5819 13.7957 21.3212 14.4076 20.7997C14.6511 20.5922 14.7729 20.4884 14.9029 20.4013C15.201 20.2015 15.5358 20.0628 15.8879 19.9933C16.0415 19.963 16.201 19.9502 16.5199 19.9248C17.3213 19.8608 17.722 19.8288 18.0563 19.7108C18.8295 19.4377 19.4377 18.8295 19.7108 18.0563C19.8288 17.722 19.8608 17.3213 19.9248 16.5199C19.9502 16.201 19.963 16.0415 19.9933 15.8879C20.0628 15.5358 20.2015 15.201 20.4013 14.9029C20.4884 14.7729 20.5922 14.6511 20.7997 14.4076C21.3212 13.7957 21.5819 13.4898 21.7348 13.1699C22.0884 12.43 22.0884 11.57 21.7348 10.8301C21.5819 10.5102 21.3212 10.2043 20.7997 9.5924C20.5922 9.34887 20.4884 9.22711 20.4013 9.09706C20.2015 8.79896 20.0628 8.46417 19.9933 8.1121C19.963 7.95851 19.9502 7.79903 19.9248 7.48008C19.8608 6.6787 19.8288 6.278 19.7108 5.94371C19.4377 5.17051 18.8295 4.56233 18.0563 4.28923C17.722 4.17115 17.3213 4.13918 16.5199 4.07522C16.201 4.04977 16.0415 4.03705 15.8879 4.00672C15.5358 3.93721 15.201 3.79854 14.9029 3.59874C14.7729 3.51158 14.6511 3.40781 14.4076 3.20027C13.7957 2.67883 13.4898 2.41811 13.1699 2.26522C12.43 1.91159 11.57 1.91159 10.8301 2.26522C10.5102 2.4181 10.2043 2.67883 9.5924 3.20027ZM15.8309 8.16959C16.1487 8.48742 16.1487 9.00273 15.8309 9.32056L9.32003 15.8314C9.0022 16.1493 8.48689 16.1493 8.16906 15.8314C7.85123 15.5136 7.85123 14.9983 8.16906 14.6805L14.6799 8.16959C14.9978 7.85176 15.5131 7.85176 15.8309 8.16959ZM15.798 14.7134C15.798 15.3127 15.3122 15.7985 14.7129 15.7985C14.1135 15.7985 13.6277 15.3127 13.6277 14.7134C13.6277 14.1141 14.1135 13.6282 14.7129 13.6282C15.3122 13.6282 15.798 14.1141 15.798 14.7134ZM9.28712 10.3728C9.88643 10.3728 10.3723 9.88696 10.3723 9.28765C10.3723 8.68834 9.88643 8.2025 9.28712 8.2025C8.68781 8.2025 8.20197 8.68834 8.20197 9.28765C8.20197 9.88696 8.68781 10.3728 9.28712 10.3728Z" fill="#ff0000"></path></g></svg>
+                        OFERTAS
+                    </a>
+                    <a href="#" class="block py-1 px-2 text-gray-800 font-semibold hover:bg-gray-100 rounded-lg transition-colors">Contacto</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Sidenav Menu (For Mobile) -->
+<div id="sidenav-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden opacity-0 md:hidden"></div>
+<div id="sidenav" class="fixed top-0 left-0 w-72 bg-white shadow-lg transform -translate-x-full z-40 md:hidden flex flex-col h-full"> <!-- Añadido h-full -->
+    <div class="flex justify-between items-center py-2 px-4 border-b flex-shrink-0">
+        <h2 class="text-xl font-bold">MENÚ</h2>
+        <button id="close-sidenav" class="flex flex-col items-center justify-center p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 -960 960 960" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+            <span class="text-[0.54rem] font-semibold -mt-1">CERRAR</span>
+        </button>
+    </div>
+    <nav class="p-4 flex-grow overflow-y-auto">
+        <a href="index.html" class="block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors">Inicio</a>
+        <a href="all-products.html" class="block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors">Ver Catálogo</a>
+
+        <!-- Mobile Categories Accordion -->
+        <div>
+            <button id="mobile-categories-btn" class="flex justify-between items-center w-full py-3 px-4 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors">
+                <span>Categorías</span>
+                <svg id="mobile-categories-arrow" class="w-5 h-5 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+            </button>
+            <div id="mobile-categories-submenu" class="hidden pl-8">
+                <!-- Dynamic categories will be injected here -->
+                <p class="py-2 px-4 text-xs text-gray-400">Cargando...</p>
+            </div>
+        </div>
+
+        <!-- Mobile Marcas Accordion -->
+        <div>
+            <button id="mobile-marcas-btn" class="flex justify-between items-center w-full py-3 px-4 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors">
+                <span>Marcas</span>
+                <svg id="mobile-marcas-arrow" class="w-5 h-5 transition-transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+            </button>
+            <div id="mobile-marcas-submenu" class="hidden pl-8">
+                <!-- Dynamic brands will be injected here -->
+                 <p class="py-2 px-4 text-xs text-gray-400">Cargando...</p>
+            </div>
+        </div>
+
+        <a href="#" class="flex items-center py-3 px-4 text-red-600 font-medium hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M9.5924 3.20027C9.34888 3.4078 9.22711 3.51158 9.09706 3.59874C8.79896 3.79854 8.46417 3.93721 8.1121 4.00672C7.95851 4.03705 7.79903 4.04977 7.48008 4.07522C6.6787 4.13918 6.278 4.17115 5.94371 4.28923C5.17051 4.56233 4.56233 5.17051 4.28923 5.94371C4.17115 6.278 4.13918 6.6787 4.07522 7.48008C4.04977 7.79903 4.03705 7.95851 4.00672 8.1121C3.93721 8.46417 3.79854 8.79896 3.59874 9.09706C3.51158 9.22711 3.40781 9.34887 3.20027 9.5924C2.67883 10.2043 2.4181 10.5102 2.26522 10.8301C1.91159 11.57 1.91159 12.43 2.26522 13.1699C2.41811 13.4898 2.67883 13.7957 3.20027 14.4076C3.40778 14.6511 3.51158 14.7729 3.59874 14.9029C3.79854 15.201 3.93721 15.5358 4.00672 15.8879C4.03705 16.0415 4.04977 16.201 4.07522 16.5199C4.13918 17.3213 4.17115 17.722 4.28923 18.0563C4.56233 18.8295 5.17051 19.4377 5.94371 19.7108C6.278 19.8288 6.6787 19.8608 7.48008 19.9248C7.79903 19.9502 7.95851 19.963 8.1121 19.9933C8.46417 20.0628 8.79896 20.2015 9.09706 20.4013C9.22711 20.4884 9.34887 20.5922 9.5924 20.7997C10.2043 21.3212 10.5102 21.5819 10.8301 21.7348C11.57 22.0884 12.43 22.0884 13.1699 21.7348C13.4898 21.5819 13.7957 21.3212 14.4076 20.7997C14.6511 20.5922 14.7729 20.4884 14.9029 20.4013C15.201 20.2015 15.5358 20.0628 15.8879 19.9933C16.0415 19.963 16.201 19.9502 16.5199 19.9248C17.3213 19.8608 17.722 19.8288 18.0563 19.7108C18.8295 19.4377 19.4377 18.8295 19.7108 18.0563C19.8288 17.722 19.8608 17.3213 19.9248 16.5199C19.9502 16.201 19.963 16.0415 19.9933 15.8879C20.0628 15.5358 20.2015 15.201 20.4013 14.9029C20.4884 14.7729 20.5922 14.6511 20.7997 14.4076C21.3212 13.7957 21.5819 13.4898 21.7348 13.1699C22.0884 12.43 22.0884 11.57 21.7348 10.8301C21.5819 10.5102 21.3212 10.2043 20.7997 9.5924C20.5922 9.34887 20.4884 9.22711 20.4013 9.09706C20.2015 8.79896 20.0628 8.46417 19.9933 8.1121C19.963 7.95851 19.9502 7.79903 19.9248 7.48008C19.8608 6.6787 19.8288 6.278 19.7108 5.94371C19.4377 5.17051 18.8295 4.56233 18.0563 4.28923C17.722 4.17115 17.3213 4.13918 16.5199 4.07522C16.201 4.04977 16.0415 4.03705 15.8879 4.00672C15.5358 3.93721 15.201 3.79854 14.9029 3.59874C14.7729 3.51158 14.6511 3.40781 14.4076 3.20027C13.7957 2.67883 13.4898 2.41811 13.1699 2.26522C12.43 1.91159 11.57 1.91159 10.8301 2.26522C10.5102 2.4181 10.2043 2.67883 9.5924 3.20027ZM15.8309 8.16959C16.1487 8.48742 16.1487 9.00273 15.8309 9.32056L9.32003 15.8314C9.0022 16.1493 8.48689 16.1493 8.16906 15.8314C7.85123 15.5136 7.85123 14.9983 8.16906 14.6805L14.6799 8.16959C14.9978 7.85176 15.5131 7.85176 15.8309 8.16959ZM15.798 14.7134C15.798 15.3127 15.3122 15.7985 14.7129 15.7985C14.1135 15.7985 13.6277 15.3127 13.6277 14.7134C13.6277 14.1141 14.1135 13.6282 14.7129 13.6282C15.3122 13.6282 15.798 14.1141 15.798 14.7134ZM9.28712 10.3728C9.88643 10.3728 10.3723 9.88696 10.3723 9.28765C10.3723 8.68834 9.88643 8.2025 9.28712 8.2025C8.68781 8.2025 8.20197 8.68834 8.20197 9.28765C8.20197 9.88696 8.68781 10.3728 9.28712 10.3728Z" fill="#ff0000"></path></g></svg>
+            OFERTAS
+        </a>
+        <a href="#" class="block py-3 px-4 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors">Contacto</a>
+    </nav>
+    <div class="p-4 pb-6 border-t flex-shrink-0">
+        <h3 class="font-medium text-gray-800 mb-3 text-center">¡Síguenos en Redes!</h3>
+        <div class="flex space-x-4 justify-center">
+            <!-- Social media links -->
+            <a href="https://instagram.com/arelyshopbo" target="_blank" class="text-gray-700 hover:text-black">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><!-- Instagram Icon --></svg>
+            </a>
+            <a href="https://www.facebook.com/arelyshopbo" target="_blank" class="text-gray-700 hover:text-black">
+               <svg class="w-6 h-6" viewBox="-5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg"><!-- Facebook Icon --></svg>
+            </a>
+            <a href="https://youtube.com/@diegofloresfilmmaker1168?si=ezBrvwsZyq8vD4fY" target="_blank" class="text-gray-700 hover:text-black">
+               <svg class="w-6 h-6" viewBox="0 -3 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg"><!-- YouTube Icon --></svg>
+            </a>
+            <a href="https://www.tiktok.com/@arelyshopbo" target="_blank" class="text-gray-700 hover:text-black">
+               <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><!-- TikTok Icon --></svg>
+            </a>
+            <a href="https://wa.me/59167500044" target="_blank" class="text-gray-700 hover:text-black">
+               <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="currentColor" viewBox="0 0 16 16"><!-- WhatsApp Icon --></svg>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Cart -->
+<div id="cart-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 md:z-50 hidden opacity-0"></div>
+<div id="cart-flyout" class="fixed top-0 right-0 h-full w-full md:w-96 bg-white shadow-lg transform translate-x-full z-40 md:z-50 flex flex-col">
+    <!-- Cart Header -->
+    <div class="flex justify-between items-center p-4 border-b flex-shrink-0">
+        <h2 class="text-xl font-bold">Mi Carrito</h2>
+        <button id="close-cart-btn" class="flex flex-col items-center justify-center p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 -960 960 960" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"></path></svg>
+            <span class="text-[0.54rem] font-semibold -mt-1">CERRAR</span>
+        </button>
+    </div>
+    <!-- Cart Items -->
+    <div id="cart-items-container" class="flex-grow p-4 overflow-y-auto">
+         <!-- Items will be injected here by JavaScript -->
+         <p class="text-gray-500 text-center">Tu carrito está vacío.</p>
+    </div>
+    <!-- Cart Footer -->
+    <div class="p-4 pb-6 border-t">
+        <div class="flex justify-between items-center font-bold text-lg mb-4">
+            <span>Total:</span>
+            <span id="cart-total">Bs. 0.00</span>
+        </div>
+        <button id="whatsapp-order-btn" class="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center justify-center space-x-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="currentColor" viewBox="0 0 16 16"><!-- WhatsApp Icon --></svg>
+            <span>Realizar Pedido por WhatsApp</span>
+        </button>
+    </div>
+</div>
