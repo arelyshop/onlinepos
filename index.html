@@ -73,6 +73,11 @@
             transition: transform 0.5s ease-in-out;
             transform: translateY(-100%);
         }
+        /* PDF Viewer Modal Styling */
+        #pdf-viewer-modal embed {
+            width: 100%;
+            height: 80vh; /* Adjust height as needed */
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -343,6 +348,18 @@
         </div>
     </div>
 
+    <!-- PDF Viewer Modal (Nuevo) -->
+    <div id="pdf-viewer-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-4 rounded-lg shadow-xl w-full max-w-4xl relative">
+             <button id="close-pdf-viewer-btn" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-3xl font-bold z-10">&times;</button>
+             <h3 class="text-xl font-bold text-gray-800 mb-4" id="pdf-viewer-title">Vista Previa de Venta</h3>
+             <div id="pdf-embed-container">
+                 <!-- Embed se llenará con JavaScript -->
+                 <p class="text-center text-gray-500 py-10">Cargando PDF...</p>
+             </div>
+        </div>
+    </div>
+
 
     <script>
         // --- GLOBAL APP STATE ---
@@ -356,13 +373,19 @@
         let html5QrCode = null;
         let currentPdfBlob = null;
         let currentPdfFileName = '';
-        let currentUser = null; // Almacenará los datos del usuario logueado
-        let saleIdToAnnul = null; // Para la confirmación de anulación
+        let currentUser = null;
+        let saleIdToAnnul = null;
+        let currentPdfViewerUrl = null; // Para manejar la URL del visor PDF
 
         // --- AUTHENTICATION & INITIALIZATION ---
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('current-year').textContent = new Date().getFullYear();
-            html5QrCode = new Html5Qrcode("reader");
+            try {
+                 html5QrCode = new Html5Qrcode("reader");
+            } catch (e) {
+                 console.error("Error inicializando Html5Qrcode:", e);
+                 // No mostrar notificación aquí, manejar el error al intentar escanear
+            }
             setupLoginListener();
             checkAuth();
             document.getElementById('logout-button').addEventListener('click', logout);
@@ -475,23 +498,40 @@
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) {
-                        // Intentar parsear el error como JSON
                         let errorData = { message: `Error HTTP: ${response.status}` };
                         try {
                             errorData = await response.json();
                         } catch (parseError) {
-                            // Si no es JSON, usar el texto
-                            errorData.message = await response.text() || errorData.message;
+                            try {
+                                errorData.message = await response.text() || errorData.message;
+                            } catch (textError) {
+                                // Fallback if text() also fails
+                            }
                         }
                          console.error("Error response from server:", errorData);
                         throw new Error(errorData.message || `Error HTTP: ${response.status}`);
                     }
-                    return response; // Devolver la respuesta completa si es OK
+                    // Solo intentar parsear JSON si la respuesta fue OK
+                     try {
+                         // Leer el cuerpo una vez y guardarlo
+                         const responseBody = await response.text();
+                         // Intentar parsear como JSON
+                         return JSON.parse(responseBody);
+                     } catch (jsonError) {
+                         // Si falla el parseo JSON, podría ser una respuesta vacía exitosa (ej. 204) o un error de formato
+                         console.warn(`Respuesta no es JSON válido desde ${url}:`, response.status, response.statusText);
+                         // Devolver un objeto indicando éxito pero sin datos JSON si es status 2xx
+                         if (response.status >= 200 && response.status < 300) {
+                              return { status: 'success', data: null, message: 'Respuesta sin contenido JSON.' };
+                         } else {
+                             // Si no es 2xx y no es JSON, lanzar error
+                              throw new Error(`Respuesta inválida del servidor: ${response.status} ${response.statusText}`);
+                         }
+                     }
                 } catch (error) {
                     console.warn(`Intento ${attempt + 1} fallido (${url}): ${error.message}`);
                     if (attempt + 1 >= maxRetries) {
                         console.error(`Todos los intentos de fetch fallaron para ${url}.`);
-                        // Lanzar el error original para que sea manejado por el .catch externo
                         throw error;
                     }
                     const delay = Math.pow(2, attempt) * 1000;
@@ -499,6 +539,7 @@
                 }
             }
         }
+
 
         function showNotification(message, type) {
             const banner = document.getElementById('notification-banner');
@@ -524,7 +565,7 @@
                 resolve({dataURL: canvas.toDataURL('image/png'), width: img.width, height: img.height});
             };
             img.onerror = () => resolve(null);
-            img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime(); // Cache busting
+            img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
         });
 
         const loadImageAsJpegDataUrl = (url) => new Promise((resolve) => {
@@ -539,7 +580,7 @@
                 resolve({dataURL: canvas.toDataURL('image/jpeg', 0.8), width: img.width, height: img.height});
             };
             img.onerror = () => resolve(null);
-             img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime(); // Cache busting
+             img.src = url + (url.includes('?') ? '&' : '?') + new Date().getTime();
         });
 
         function initTabs() {
@@ -581,10 +622,13 @@
             document.querySelectorAll('.copy-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     const targetId = e.currentTarget.dataset.copyTarget;
-                    const textToCopy = document.getElementById(targetId).textContent;
-                    copyToClipboard(textToCopy, e.currentTarget);
+                    const textToCopy = document.getElementById(targetId)?.textContent || ''; // Añadir ? por seguridad
+                    if (textToCopy) {
+                         copyToClipboard(textToCopy, e.currentTarget);
+                    }
                 });
             });
+
 
             document.getElementById('cart-items').addEventListener('click', (e) => {
                 const infoButton = e.target.closest('.info-btn');
@@ -606,21 +650,35 @@
             document.getElementById('scan-pos-btn').addEventListener('click', () => startScanner('search-product'));
             document.getElementById('close-scanner-btn').addEventListener('click', stopScanner);
 
-            // Event listeners para el modal de anulación
             document.getElementById('cancel-annul-btn').addEventListener('click', () => {
                 document.getElementById('annul-confirm-modal').classList.add('hidden');
-                saleIdToAnnul = null; // Limpiar ID al cancelar
+                saleIdToAnnul = null;
             });
             document.getElementById('confirm-annul-btn').addEventListener('click', () => {
                 if (saleIdToAnnul) {
                     annulSaleInBackend(saleIdToAnnul);
                 }
             });
+
+             // Event listener para botones "Ver PDF" (usando delegación)
+            document.getElementById('sales-results-container').addEventListener('click', (event) => {
+                const viewPdfButton = event.target.closest('.view-pdf-btn');
+                if (viewPdfButton) {
+                    const saleId = viewPdfButton.dataset.saleid;
+                    if (saleId) {
+                        showPdfModal(saleId);
+                    }
+                }
+            });
+
+            // Event listener para cerrar el modal del visor PDF
+            document.getElementById('close-pdf-viewer-btn').addEventListener('click', closePdfModal);
+
         }
 
         // --- DATA MAPPING ---
         const mapProductToFrontend = (p) => ({
-            id: p.id, // Asegurarse de tener el ID para actualizar stock
+            id: p.id,
             nombre: p.name,
             sku: p.sku,
             precioVenta: p.sale_price,
@@ -635,34 +693,59 @@
 
         async function fetchProducts() {
             try {
-                const response = await robustFetch(`${API_BASE_URL}/products`);
-                const result = await response.json();
+                // Ya no se usa robustFetch aquí porque products.js devuelve JSON directamente
+                const response = await fetch(`${API_BASE_URL}/products`);
+                 if (!response.ok) {
+                    // Leer el cuerpo del error como texto o JSON
+                     let errorDetails = `Error HTTP: ${response.status}`;
+                    try {
+                         const errorJson = await response.json();
+                         errorDetails = errorJson.message || errorJson.error || JSON.stringify(errorJson);
+                    } catch {
+                         try {
+                            errorDetails = await response.text() || errorDetails;
+                         } catch {}
+                    }
+                    throw new Error(errorDetails);
+                 }
+                const result = await response.json(); // Parsear JSON aquí
                 products = result.status === 'success' ? result.data.map(mapProductToFrontend) : [];
             } catch (error) {
                 console.error("Fallo al cargar productos:", error);
                 showNotification(`No se pudieron cargar los productos: ${error.message}`, 'error');
+                products = []; // Asegurar que products sea un array vacío en caso de error
             }
         }
 
+
         async function fetchSales() {
             try {
-                const response = await robustFetch(`${API_BASE_URL}/sales`);
-                const result = await response.json();
-                if (result.status === 'success') {
-                    // Ordenar por fecha descendente al cargar
+                 // Usar fetch normal, robustFetch modificado parsea JSON
+                 const response = await fetch(`${API_BASE_URL}/sales`);
+                  if (!response.ok) {
+                    let errorDetails = `Error HTTP: ${response.status}`;
+                    try { const errorJson = await response.json(); errorDetails = errorJson.message || JSON.stringify(errorJson); } catch { try { errorDetails = await response.text() || errorDetails; } catch {} }
+                    throw new Error(errorDetails);
+                 }
+                const result = await response.json(); // Parsear aquí
+                if (result.status === 'success' && Array.isArray(result.data)) {
                     sales = result.data.sort((a, b) => new Date(b.fechaVenta) - new Date(a.fechaVenta));
+                } else {
+                     sales = []; // Asegurar array vacío si no hay datos o el formato es incorrecto
+                     if (result.status !== 'success') console.warn("La respuesta de fetchSales no fue exitosa:", result);
                 }
             } catch (error) {
                 console.error("Fallo al cargar las ventas:", error);
                 showNotification(`No se pudieron cargar las ventas: ${error.message}`, 'error');
+                sales = []; // Asegurar array vacío en caso de error
             }
         }
+
 
         function displayNextSaleId() {
             let nextId = "AS1";
             if (sales.length > 0) {
-                 // Ya están ordenadas por fecha descendente, la primera es la más reciente
-                 const lastSaleId = sales[0].saleId;
+                 const lastSaleId = sales[0].saleId; // Ya están ordenadas descendentemente
                  const lastIdNumber = parseInt(lastSaleId.substring(2));
 
                 if (!isNaN(lastIdNumber)) {
@@ -705,7 +788,6 @@
                 filteredProducts.forEach(p => {
                     const div = document.createElement('div');
                     div.className = 'p-3 hover:bg-gray-100 cursor-pointer';
-                    // Mostrar precio de descuento si existe, si no, el normal
                     const displayPrice = (p.precioDescuento && parseFloat(p.precioDescuento) > 0)
                                         ? parseFloat(p.precioDescuento).toFixed(2)
                                         : parseFloat(p.precioVenta).toFixed(2);
@@ -720,7 +802,7 @@
 
 
         function addToCart(product) {
-            const latestProductInfo = products.find(p => p.id === product.id); // Usar ID para encontrar el producto exacto
+            const latestProductInfo = products.find(p => p.id === product.id);
 
             if (!latestProductInfo || latestProductInfo.cantidad <= 0) {
                 showNotification('Este producto no tiene stock disponible.', 'error');
@@ -729,7 +811,7 @@
                 return;
             }
 
-            const existingCartItem = cart.find(item => item.id === product.id); // Buscar por ID en el carrito
+            const existingCartItem = cart.find(item => item.id === product.id);
 
             if (existingCartItem) {
                 if (existingCartItem.quantity < latestProductInfo.cantidad) {
@@ -741,13 +823,15 @@
                 const defaultPrice = (latestProductInfo.precioDescuento && parseFloat(latestProductInfo.precioDescuento) > 0)
                                ? parseFloat(latestProductInfo.precioDescuento)
                                : parseFloat(latestProductInfo.precioVenta);
-                cart.push({ ...latestProductInfo, quantity: 1, customPrice: defaultPrice });
+                // Asegurar que copiamos el ID del producto al carrito
+                cart.push({ ...latestProductInfo, id: latestProductInfo.id, quantity: 1, customPrice: defaultPrice });
             }
 
             document.getElementById('search-product').value = '';
             document.getElementById('search-results').classList.add('hidden');
             renderCart();
         }
+
 
         function renderCart() {
             const cartItemsContainer = document.getElementById('cart-items');
@@ -756,12 +840,12 @@
                 cartItemsContainer.innerHTML = '<tr id="empty-cart-row"><td colspan="6" class="text-center py-8 text-gray-500">El carrito está vacío</td></tr>';
             } else {
                 cart.forEach((item, index) => {
-                     // Obtener el stock actual del producto desde la lista principal
                      const currentProductInfo = products.find(p => p.id === item.id);
-                     const currentStock = currentProductInfo ? currentProductInfo.cantidad : 0;
+                     const currentStock = currentProductInfo ? currentProductInfo.cantidad : 0; // Stock actual
 
                     const subtotal = item.quantity * item.customPrice;
                     const row = document.createElement('tr');
+                    // Input de cantidad ahora tiene min="0" y max="currentStock"
                     row.innerHTML = `
                         <td class="px-2 py-3 text-center align-middle">
                             <button class="info-btn text-gray-400 hover:text-blue-600" data-cart-index="${index}">
@@ -780,30 +864,35 @@
             updateTotal();
         }
 
+
         function updateItemPrice(index, newPrice) {
             const price = parseFloat(newPrice);
-            if (!isNaN(price) && price >= 0) cart[index].customPrice = price;
-            renderCart();
+            if (index >= 0 && index < cart.length && !isNaN(price) && price >= 0) {
+                 cart[index].customPrice = price;
+                 renderCart();
+            }
         }
 
         function setQuantity(index, newQuantity) {
+             if (index < 0 || index >= cart.length) return; // Validación de índice
+
             const cartItem = cart[index];
-            const productInStock = products.find(p => p.id === cartItem.id); // Buscar por ID
+            const productInStock = products.find(p => p.id === cartItem.id);
             const maxStock = productInStock ? productInStock.cantidad : 0;
 
             let quantity = parseInt(newQuantity);
 
-            if (isNaN(quantity) || quantity < 0) { // Permitir 0 para remover
+            if (isNaN(quantity) || quantity < 0) {
                 quantity = 0;
             }
 
             if (quantity > maxStock) {
                 showNotification(`Stock insuficiente. Máximo disponible: ${maxStock}`, 'error');
-                quantity = maxStock; // Ajustar al máximo disponible
+                quantity = maxStock;
             }
 
             if (quantity === 0) {
-                 cart.splice(index, 1); // Remover si la cantidad se establece en 0
+                 cart.splice(index, 1);
             } else {
                  cart[index].quantity = quantity;
             }
@@ -811,10 +900,14 @@
             renderCart();
         }
 
+
         function removeFromCart(index) {
-            cart.splice(index, 1);
-            renderCart();
+            if (index >= 0 && index < cart.length) { // Validación de índice
+                cart.splice(index, 1);
+                renderCart();
+            }
         }
+
 
         function updateTotal() {
             const total = cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0);
@@ -826,6 +919,13 @@
 
         async function completeSale() {
             if (cart.length === 0) return;
+            // Asegurarse de que currentUser existe
+            if (!currentUser || !currentUser.id) {
+                showNotification("Error: No se ha iniciado sesión correctamente.", "error");
+                logout(); // Forzar logout si no hay usuario
+                return;
+            }
+
             const button = document.getElementById('complete-sale-button');
             const buttonText = document.getElementById('sale-button-text');
             const loader = document.getElementById('sale-loader');
@@ -844,29 +944,34 @@
                     SKU: item.sku,
                     cantidad: item.quantity,
                     precio: item.customPrice,
-                    'Precio (Compra)': item.precioCompra // Importante mantenerlo para futuros reportes
+                    'Precio (Compra)': item.precioCompra
                 })),
                 total: cart.reduce((sum, item) => sum + (item.quantity * item.customPrice), 0),
                 user: {
                     id: currentUser.id,
-                    fullName: currentUser.full_name
+                    fullName: currentUser.full_name // Usar full_name que viene del login
                 }
             };
 
             try {
-                const response = await robustFetch(`${API_BASE_URL}/sales`, {
+                // Usar fetch normal, robustFetch ahora parsea JSON
+                const response = await fetch(`${API_BASE_URL}/sales`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(saleData)
                 });
-
-                const result = await response.json();
+                 if (!response.ok) {
+                    let errorDetails = `Error HTTP: ${response.status}`;
+                    try { const errorJson = await response.json(); errorDetails = errorJson.message || JSON.stringify(errorJson); } catch { try { errorDetails = await response.text() || errorDetails; } catch {} }
+                    throw new Error(errorDetails);
+                 }
+                const result = await response.json(); // Parsear aquí
 
                 if (result.status === 'success') {
                     const { pdfBlob, fileName } = generateSalePDF(result.data.saleId, saleData);
                     showShareOptions(pdfBlob, fileName, 'Venta Completada', 'Venta guardada y PDF generado. ¿Qué deseas hacer?');
 
-                    await Promise.all([fetchProducts(), fetchSales()]); // Recargar productos (stock actualizado) y ventas
+                    await Promise.all([fetchProducts(), fetchSales()]);
 
                     cart = [];
                     renderCart();
@@ -875,10 +980,9 @@
                     displayNextSaleId();
 
                 } else {
-                    // Si el error es de stock insuficiente, re-cargar productos para mostrar stock actualizado
-                    if (result.message && result.message.toLowerCase().includes('stock insuficiente')) {
+                     if (result.message && result.message.toLowerCase().includes('stock insuficiente')) {
                         await fetchProducts();
-                        renderCart(); // Re-renderizar carrito para reflejar stock actual si es necesario
+                        renderCart();
                     }
                     throw new Error(result.message || 'Error desconocido del servidor.');
                 }
@@ -888,14 +992,12 @@
             } finally {
                 buttonText.classList.remove('hidden');
                 loader.classList.add('hidden');
-                // Habilitar botón solo si el carrito no está vacío (podría haberse vaciado por error de stock)
                 button.disabled = cart.length === 0;
             }
         }
 
 
         function generateSalePDF(saleId, saleData) {
-            // Asegurarse de que 'items' sea un array antes de pasarlo
             const validSaleData = { ...saleData, items: Array.isArray(saleData.items) ? saleData.items : [] };
             return generateDocumentPDF('Nota de Venta', `Nr: ${saleId}`, validSaleData);
         }
@@ -926,7 +1028,6 @@
         }
 
         function generateQuotePDF(quoteData) {
-             // Asegurarse de que 'items' sea un array antes de pasarlo
              const validQuoteData = { ...quoteData, items: Array.isArray(quoteData.items) ? quoteData.items : [] };
             return generateDocumentPDF('Cotización', 'Válido por 24hrs.', validQuoteData, 'Cotizacion');
         }
@@ -947,12 +1048,17 @@
 
             let textStartX = margin + 5;
             if (preloadedLogo) {
-                const logoH = 7.2; // Reducido
+                const logoH = 7.2;
                 const logoW = (preloadedLogo.width / preloadedLogo.height) * logoH;
                 const logoY = margin + (headerH - logoH) / 2;
-                doc.addImage(preloadedLogo.dataURL, 'PNG', margin + 5, logoY, logoW, logoH, undefined, 'FAST');
-                textStartX = margin + logoW + 8;
+                try { // Añadir try-catch por si addImage falla
+                    doc.addImage(preloadedLogo.dataURL, 'PNG', margin + 5, logoY, logoW, logoH, undefined, 'FAST');
+                    textStartX = margin + logoW + 8;
+                } catch (e) {
+                    console.error("Error adding logo image to PDF:", e);
+                }
             }
+
 
             doc.setFontSize(17.6);
             doc.text("ArelyShop", textStartX, margin + 15);
@@ -976,10 +1082,8 @@
 
             const tableColumn = ["Cant.", "Descripción", "P. Unit.", "Subtotal"];
             const tableRows = [];
-            // Asegurarse de que data.items es un array
             if (Array.isArray(data.items)) {
                 data.items.forEach(item => {
-                    // Asegurarse de que item.precio es un número antes de llamar a toFixed
                     const price = typeof item.precio === 'number' ? item.precio : 0;
                     const quantity = typeof item.cantidad === 'number' ? item.cantidad : 0;
                     const subtotal = quantity * price;
@@ -1001,13 +1105,13 @@
                 headStyles: { fillColor: '#cdcdcd', textColor: '#000000' },
                 styles: { cellPadding: 2, fontSize: 9 },
                 didParseCell: function (data) {
-                    if (data.column.dataKey === 1) { // Columna de Descripción
+                    if (data.column.dataKey === 1) { // Descripción
                         data.cell.styles.fontSize = 8;
                     }
-                     if (data.column.index >= 2) { // Columnas numéricas (P. Unit, Subtotal)
+                     if (data.column.index >= 2) { // P. Unit., Subtotal
                         data.cell.styles.halign = 'right';
                     }
-                     if (data.column.index === 0) { // Columna Cantidad
+                     if (data.column.index === 0) { // Cant.
                          data.cell.styles.halign = 'center';
                      }
                 }
@@ -1027,8 +1131,13 @@
                 const qrSize = 25;
                 const qrX = (pageW - qrSize) / 2;
                 const qrY = finalY + 40;
-                doc.addImage(preloadedPdfQr.dataURL, 'JPEG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
+                 try { // Añadir try-catch por si addImage falla
+                    doc.addImage(preloadedPdfQr.dataURL, 'JPEG', qrX, qrY, qrSize, qrSize, undefined, 'FAST');
+                 } catch (e) {
+                      console.error("Error adding QR image to PDF:", e);
+                 }
             }
+
 
             const customerName = (data.customer.name || '').trim().replace(/ /g, "_") || "sin-cliente";
             let fileName;
@@ -1053,7 +1162,7 @@
                 s.saleId?.toLowerCase().includes(searchTerm) ||
                 s.nombreCliente?.toLowerCase().includes(searchTerm) ||
                 s.contacto?.toString().toLowerCase().includes(searchTerm) ||
-                s.userName?.toLowerCase().includes(searchTerm) // Buscar por vendedor
+                s.userName?.toLowerCase().includes(searchTerm)
             );
 
             if (filteredSales.length === 0) {
@@ -1061,9 +1170,7 @@
                 return;
             }
 
-            // Ordenar por fecha descendente antes de renderizar (ya se hace en fetchSales, pero aseguramos aquí)
-            filteredSales.sort((a, b) => new Date(b.fechaVenta) - new Date(a.fechaVenta));
-
+            // Ya están ordenadas por fecha desc
             filteredSales.forEach(sale => {
                 const isAnnulled = sale.estado === 'Anulada';
                 const statusText = isAnnulled ? 'Anulada' : 'Completada';
@@ -1073,23 +1180,15 @@
 
                 let productsHtml = '<ul>';
                 try {
-                    // Primero, intentar parsear si es string. Si falla o no es string, usar directamente.
                     let saleProducts;
                     if (typeof sale.productosVendidos === 'string') {
-                        try {
-                            saleProducts = JSON.parse(sale.productosVendidos);
-                        } catch (e) {
-                            console.error(`Error parsing productosVendidos for sale ${sale.saleId}:`, e);
-                            saleProducts = null; // Marcar como inválido si falla el parseo
-                        }
+                        try { saleProducts = JSON.parse(sale.productosVendidos); } catch (e) { saleProducts = null; }
                     } else {
-                        saleProducts = sale.productosVendidos; // Usar directamente si no es string
+                        saleProducts = sale.productosVendidos;
                     }
 
-                    // Asegurarse de que sea un array antes de iterar
                     if (Array.isArray(saleProducts)) {
                         saleProducts.forEach(p => {
-                            // Validar que 'p' sea un objeto y tenga las propiedades esperadas
                             if (p && typeof p === 'object' && p.hasOwnProperty('cantidad') && p.hasOwnProperty('Nombre') && p.hasOwnProperty('precio')) {
                                 const price = p.precio !== undefined ? parseFloat(p.precio).toFixed(2) : 'N/A';
                                 const sku = p.SKU || 'N/A';
@@ -1110,7 +1209,7 @@
 
 
                 const totalVenta = sale.totalVenta !== undefined ? parseFloat(sale.totalVenta).toFixed(2) : 'N/A';
-
+                 // Nuevo: Botón Ver PDF
                 card.innerHTML = `
                     <div class="flex flex-wrap justify-between items-start gap-2">
                         <div>
@@ -1122,6 +1221,7 @@
                         <div class="text-right">
                              <span class="font-semibold text-sm px-2 py-1 rounded-lg ${statusColor}">${statusText}</span>
                              <div class="mt-2 flex space-x-2 justify-end">
+                                <button class="view-pdf-btn text-xs bg-purple-600 text-white px-3 py-1 rounded-lg hover:bg-purple-700" data-saleid="${sale.saleId}">Ver PDF</button>
                                 <button onclick="reprintSale('${sale.saleId}')" class="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">Reimprimir</button>
                                 <button onclick="openAnnulConfirmModal('${sale.saleId}')" class="text-xs bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 disabled:bg-gray-400" ${isAnnulled ? 'disabled' : ''}>Anular</button>
                              </div>
@@ -1151,31 +1251,35 @@
             button.disabled = true;
 
             try {
-                // Usar PUT al endpoint principal de sales
-                const response = await robustFetch(`${API_BASE_URL}/sales`, {
+                // Usar fetch normal, robustFetch parsea JSON
+                 const response = await fetch(`${API_BASE_URL}/sales`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ saleId: saleId }) // Enviar solo el ID
-                });
-                const result = await response.json(); // Leer respuesta como JSON
+                    body: JSON.stringify({ saleId: saleId })
+                 });
+                  if (!response.ok) {
+                    let errorDetails = `Error HTTP: ${response.status}`;
+                    try { const errorJson = await response.json(); errorDetails = errorJson.message || JSON.stringify(errorJson); } catch { try { errorDetails = await response.text() || errorDetails; } catch {} }
+                    throw new Error(errorDetails);
+                 }
+                const result = await response.json(); // Parsear aquí
+
                 if (result.status === 'success') {
                     showNotification(result.message, 'success');
-                    await Promise.all([fetchSales(), fetchProducts()]); // Recargar ventas y productos
-                    renderSalesResults(); // Actualizar la lista de ventas
+                    await Promise.all([fetchSales(), fetchProducts()]);
+                    renderSalesResults();
                 } else {
-                    // Si el backend devuelve un error, lanzarlo para que lo capture el catch
                     throw new Error(result.message || 'Error desconocido del servidor.');
                 }
             } catch (error) {
                 console.error('Error al anular la venta:', error);
-                // Mostrar el mensaje de error que viene del backend o el error de red
                 showNotification(`Error: ${error.message}`, 'error');
             } finally {
                 document.getElementById('annul-confirm-modal').classList.add('hidden');
                 buttonText.classList.remove('hidden');
                 loader.classList.add('hidden');
                 button.disabled = false;
-                saleIdToAnnul = null; // Limpiar el ID
+                saleIdToAnnul = null;
             }
         }
         // --- Fin Funciones de Anulación ---
@@ -1190,21 +1294,13 @@
 
             try {
                  let saleItems;
-                 // Intentar parsear si es string
                  if (typeof saleToReprint.productosVendidos === 'string') {
-                     try {
-                         saleItems = JSON.parse(saleToReprint.productosVendidos);
-                     } catch (e) {
-                         console.error(`Error parsing productosVendidos for reprint ${saleId}:`, e);
-                         saleItems = []; // Default a array vacío si falla el parseo
-                     }
+                     try { saleItems = JSON.parse(saleToReprint.productosVendidos); } catch (e) { saleItems = []; }
                  } else {
-                     saleItems = saleToReprint.productosVendidos; // Usar directamente si no es string
+                     saleItems = saleToReprint.productosVendidos;
                  }
 
-                // Asegurar que saleItems sea un array
                 if (!Array.isArray(saleItems)) {
-                    console.warn(`productosVendidos for reprint ${saleId} is not an array:`, saleItems);
                     saleItems = [];
                 }
 
@@ -1227,12 +1323,18 @@
 
 
         function showProductModal(product) {
+            // Asegurarse de que product es un objeto antes de acceder a sus propiedades
+            if (!product || typeof product !== 'object') {
+                 console.error("Intento de mostrar modal con datos de producto inválidos:", product);
+                 return;
+            }
+
             document.getElementById('modalProductImage').src = product.urlFoto1 || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen';
             document.getElementById('modalProductName').textContent = product.nombre || 'Sin Nombre';
             document.getElementById('modalProductSku').textContent = product.sku || 'N/A';
             document.getElementById('modalProductCode').textContent = product.codigoBarras || 'N/A';
             document.getElementById('modalProductBranch').textContent = product.ciudadSucursal || 'N/A';
-            document.getElementById('modalProductStock').textContent = product.cantidad || '0';
+            document.getElementById('modalProductStock').textContent = product.cantidad?.toString() || '0'; // Convertir a string
 
             const salePrice = parseFloat(product.precioVenta || 0).toFixed(2);
             const discountPrice = parseFloat(product.precioDescuento || 0);
@@ -1256,28 +1358,42 @@
             document.getElementById('productDetailModal').classList.remove('hidden');
         }
 
+
         function copyToClipboard(text, buttonElement) {
             if (!text || text === 'N/A') return;
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                const originalHTML = buttonElement.innerHTML; // Guardar HTML original
+            navigator.clipboard.writeText(text).then(() => {
+                const originalHTML = buttonElement.innerHTML;
                 buttonElement.innerHTML = '¡Copiado!';
                 setTimeout(() => {
-                    buttonElement.innerHTML = originalHTML; // Restaurar HTML original
+                    buttonElement.innerHTML = originalHTML;
                 }, 1500);
-            } catch (err) {
-                showNotification('No se pudo copiar el texto.', 'error');
-            }
-            document.body.removeChild(textarea);
+            }).catch(err => {
+                 console.error('Error al copiar al portapapeles:', err);
+                 // Fallback usando execCommand si navigator.clipboard falla (ej. en iframes sin permiso)
+                 try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    const originalHTML = buttonElement.innerHTML;
+                    buttonElement.innerHTML = '¡Copiado!';
+                    setTimeout(() => {
+                        buttonElement.innerHTML = originalHTML;
+                    }, 1500);
+                 } catch (execErr) {
+                     showNotification('No se pudo copiar el texto.', 'error');
+                     console.error('Fallback execCommand también falló:', execErr);
+                 }
+            });
         }
+
 
         function showQrModal() {
             const qrSrc = document.getElementById('pos-qr-code').src;
-            if (qrSrc && !qrSrc.includes('placehold.co')) { // No mostrar modal para placeholder
+            if (qrSrc && !qrSrc.includes('placehold.co')) {
                 document.getElementById('modalQrImage').src = qrSrc;
                 document.getElementById('qrCodeModal').classList.remove('hidden');
             }
@@ -1297,7 +1413,6 @@
             modalTitle.textContent = title;
             modalText.textContent = text;
 
-            // Crear el objeto File ANTES de verificar canShare
             const fileToShare = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' });
             const dataToShare = { files: [fileToShare] };
 
@@ -1306,7 +1421,7 @@
                 shareBtn.onclick = async () => {
                     try {
                         await navigator.share({
-                            files: [fileToShare], // Usar el File creado
+                            files: [fileToShare],
                             title: `Documento: ${currentPdfFileName}`,
                             text: 'Documento generado desde el sistema ArelyShop.',
                         });
@@ -1321,13 +1436,12 @@
                 };
             } else {
                 shareBtn.classList.add('hidden');
-                shareBtn.onclick = null; // Limpiar handler si no se puede compartir
+                shareBtn.onclick = null;
                  console.log("Web Share API no soportada o no se puede compartir este tipo de archivo.");
             }
 
             modal.classList.remove('hidden');
 
-            // Asegurarse de que el handler de descarga esté siempre activo
             downloadBtn.onclick = () => {
                  const link = document.createElement('a');
                  link.href = URL.createObjectURL(currentPdfBlob);
@@ -1335,7 +1449,7 @@
                  document.body.appendChild(link);
                  link.click();
                  document.body.removeChild(link);
-                 URL.revokeObjectURL(link.href); // Liberar memoria
+                 URL.revokeObjectURL(link.href);
                  modal.classList.add('hidden');
             };
 
@@ -1344,59 +1458,129 @@
             };
         }
 
+        // --- Funciones del Visor PDF (Nuevas) ---
+        function showPdfModal(saleId) {
+            const sale = sales.find(s => s.saleId === saleId);
+            if (!sale) {
+                showNotification("Venta no encontrada para mostrar PDF.", "error");
+                return;
+            }
+
+            try {
+                let saleItems;
+                if (typeof sale.productosVendidos === 'string') {
+                    try { saleItems = JSON.parse(sale.productosVendidos); } catch (e) { saleItems = []; }
+                } else {
+                    saleItems = sale.productosVendidos;
+                }
+                if (!Array.isArray(saleItems)) saleItems = [];
+
+                const saleData = {
+                    customer: { name: sale.nombreCliente, contact: sale.contacto, id: sale.nitCi },
+                    items: saleItems,
+                    total: parseFloat(sale.totalVenta)
+                };
+
+                const { pdfBlob } = generateSalePDF(saleId, saleData);
+
+                // Limpiar URL anterior si existe
+                if (currentPdfViewerUrl) {
+                    URL.revokeObjectURL(currentPdfViewerUrl);
+                }
+
+                currentPdfViewerUrl = URL.createObjectURL(pdfBlob);
+
+                const embedContainer = document.getElementById('pdf-embed-container');
+                embedContainer.innerHTML = ''; // Limpiar contenido anterior
+                const embed = document.createElement('embed');
+                embed.src = currentPdfViewerUrl;
+                embed.type = 'application/pdf';
+                embed.style.width = '100%';
+                embed.style.height = '80vh'; // Ajustar altura
+                embedContainer.appendChild(embed);
+
+                document.getElementById('pdf-viewer-title').textContent = `Vista Previa - Venta ${saleId}`;
+                document.getElementById('pdf-viewer-modal').classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error generando o mostrando PDF en modal:", error);
+                showNotification("No se pudo mostrar el PDF de la venta.", "error");
+                closePdfModal(); // Cerrar modal si hay error
+            }
+        }
+
+        function closePdfModal() {
+            document.getElementById('pdf-viewer-modal').classList.add('hidden');
+            document.getElementById('pdf-embed-container').innerHTML = '<p class="text-center text-gray-500 py-10">Cargando PDF...</p>'; // Resetear
+            // Revocar la URL del Blob para liberar memoria
+            if (currentPdfViewerUrl) {
+                URL.revokeObjectURL(currentPdfViewerUrl);
+                currentPdfViewerUrl = null;
+            }
+        }
+        // --- Fin Funciones del Visor PDF ---
+
 
         function startScanner(targetInputId) {
-            document.getElementById('scanner-modal').classList.remove('hidden');
-
-            const onScanSuccess = (decodedText, decodedResult) => {
-                const targetInput = document.getElementById(targetInputId);
-                targetInput.value = decodedText;
-                stopScanner();
-
-                if (targetInputId === 'search-product') {
-                    // Simular evento 'Enter' para buscar el producto escaneado
-                    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
-                    targetInput.dispatchEvent(enterEvent);
-                }
-            };
-
-            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }; // Probar aspectRatio
-
-            // Crear instancia si no existe
-            if (!html5QrCode) {
+            // Verificar si el escáner ya fue inicializado antes
+            if (!html5QrCode && document.getElementById('reader')) {
                  try {
                     html5QrCode = new Html5Qrcode("reader");
                  } catch (e) {
                      console.error("Error inicializando Html5Qrcode:", e);
-                     showNotification("Error al inicializar el escáner.", "error");
-                     document.getElementById('scanner-modal').classList.add('hidden');
-                     return;
+                     showNotification("Error al inicializar el escáner. Revisa la consola.", "error");
+                     return; // No continuar si falla la inicialización
                  }
+            } else if (!document.getElementById('reader')) {
+                 console.error("Elemento 'reader' no encontrado en el DOM.");
+                 showNotification("Error: No se encuentra el contenedor del escáner.", "error");
+                 return;
             }
 
 
-             // Intentar obtener cámaras y luego iniciar
+            document.getElementById('scanner-modal').classList.remove('hidden');
+
+            const onScanSuccess = (decodedText, decodedResult) => {
+                const targetInput = document.getElementById(targetInputId);
+                if (targetInput) {
+                    targetInput.value = decodedText;
+                     // Disparar evento 'input' para búsquedas dinámicas si aplica
+                    const inputEvent = new Event('input', { bubbles: true });
+                    targetInput.dispatchEvent(inputEvent);
+
+                     // Simular 'Enter' solo para la búsqueda de productos en POS
+                     if (targetInputId === 'search-product') {
+                        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
+                        targetInput.dispatchEvent(enterEvent);
+                     }
+                }
+                stopScanner(); // Detener después de éxito
+            };
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+
              Html5Qrcode.getCameras().then(devices => {
                 if (devices && devices.length) {
-                    const cameraId = devices.length > 1 ? devices[1].id : devices[0].id; // Preferir cámara trasera si hay más de una
-                    html5QrCode.start(
-                        cameraId, // Usar ID de cámara específico
-                        config,
-                        onScanSuccess,
-                        (errorMessage) => {
-                            // parse error, ideally ignore it. No hacer nada aquí para evitar logs innecesarios
-                            // console.warn(`QR Code no detectado, error = ${errorMessage}`);
-                        })
-                    .catch(err => {
-                        console.error("No se pudo iniciar el escáner con ID específico.", err);
-                        // Fallback a default si falla con ID
-                        html5QrCode.start( { facingMode: "environment" }, config, onScanSuccess, (e)=>{})
-                        .catch(errFallback => {
-                              console.error("No se pudo iniciar el escáner (fallback).", errFallback);
-                              showNotification("No se pudo iniciar la cámara. Revisa los permisos.", 'error');
-                              stopScanner(); // Asegurarse de cerrar el modal si falla
+                    // Preferir cámara trasera ('environment') si está disponible
+                    const rearCamera = devices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear') || device.label.toLowerCase().includes('environment'));
+                    const cameraId = rearCamera ? rearCamera.id : devices[0].id; // Usar trasera o la primera
+
+                    // Verificar si ya está escaneando antes de llamar a start
+                    if (html5QrCode && !(typeof html5QrCode.isScanning === 'boolean' && html5QrCode.isScanning)) {
+                        html5QrCode.start( cameraId, config, onScanSuccess, (errorMessage) => {})
+                        .catch(err => {
+                            console.error("No se pudo iniciar el escáner con cámara preferida.", err);
+                            // Fallback a default si falla
+                            if (html5QrCode && !(typeof html5QrCode.isScanning === 'boolean' && html5QrCode.isScanning)){
+                                html5QrCode.start( { facingMode: "environment" }, config, onScanSuccess, (e)=>{})
+                                .catch(errFallback => {
+                                      console.error("No se pudo iniciar el escáner (fallback).", errFallback);
+                                      showNotification("No se pudo iniciar la cámara. Revisa los permisos.", 'error');
+                                      stopScanner();
+                                });
+                            }
                         });
-                    });
+                    }
                 } else {
                     console.error("No se encontraron cámaras.");
                      showNotification("No se detectaron cámaras en tu dispositivo.", 'error');
@@ -1404,27 +1588,22 @@
                 }
             }).catch(err => {
                 console.error("Error obteniendo cámaras:", err);
-                 showNotification("Error al acceder a las cámaras.", 'error');
+                 showNotification("Error al acceder a las cámaras. Asegúrate de dar permiso.", 'error');
                  stopScanner();
             });
         }
 
 
         function stopScanner() {
-            // Asegurarse de que html5QrCode existe y tiene el método isScanning
              if (html5QrCode && typeof html5QrCode.isScanning === 'boolean' && html5QrCode.isScanning) {
                 html5QrCode.stop().then(ignore => {
-                    // QR Code scanning is stopped.
                     console.log("QR Code scanning stopped.");
                 }).catch(err => {
-                    // Stop failed, handle it.
                     console.error("Fallo al detener el escáner:", err);
                 }).finally(() => {
-                    // Ocultar modal independientemente del resultado de stop()
                     document.getElementById('scanner-modal').classList.add('hidden');
                 });
             } else {
-                 // Si no está escaneando o no existe, solo ocultar el modal
                  document.getElementById('scanner-modal').classList.add('hidden');
             }
         }
@@ -1433,4 +1612,3 @@
     </script>
 </body>
 </html>
-
