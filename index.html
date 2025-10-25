@@ -11,14 +11,14 @@
     <meta property="og:url" content="https://arelyshop.com/">
     <meta property="og:title" content="Arelyshop.com - Página Principal">
     <meta property="og:description" content="Visita Arelyshop.com y descubre los mejores accesorios y gadgets de UGREEN | BASEUS | ANKER para hacer tu día más fácil.">
-    <meta property="og:image" content="https://arelyshop.com/images/arelyshop-preview.webp"> <!-- Asegúrate que esta imagen exista -->
+    <meta property="og:image" content="https://arelyshop.com/images/arelyshop-preview.webp">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://arelyshop.com/">
     <meta name="twitter:title" content="Arelyshop.com - Página Principal">
     <meta name="twitter:description" content="Visita Arelyshop.com y descubre los mejores accesorios y gadgets de UGREEN | BASEUS | ANKER para hacer tu día más fácil.">
-    <meta name="twitter:image" content="https://arelyshop.com/images/arelyshop-preview.webp"> <!-- Asegúrate que esta imagen exista -->
+    <meta name="twitter:image" content="https://arelyshop.com/images/arelyshop-preview.webp">
 
-    <link rel="icon" href="/images/favicon.svg" type="image/svg+xml"> <!-- Asegúrate que este archivo exista -->
+    <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,30 +30,13 @@
         .banner-carousel-slide { min-width: 100%; box-sizing: border-box; }
         @keyframes cart-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
         .cart-bounce-animation { animation: cart-bounce 0.5s ease; }
-        /* Limita el título del producto a 2 líneas */
-        .product-title {
-            height: 2.5em; /* Ajusta según tamaño de fuente y line-height (1.25em * 2) */
-            line-height: 1.25em;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            text-overflow: ellipsis;
-        }
-        /* Scrollbar para resultados de búsqueda */
+        .product-title { height: 2.5em; line-height: 1.25em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; text-overflow: ellipsis; }
         .search-results-container::-webkit-scrollbar { width: 8px; }
         .search-results-container::-webkit-scrollbar-track { background: #f1f1f1; }
         .search-results-container::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
         .search-results-container::-webkit-scrollbar-thumb:hover { background: #555; }
-        /* Estilo para productos agotados */
-        .sold-out-watermark {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
-            background-color: rgba(0, 0, 0, 0.7); color: white; font-weight: bold;
-            padding: 6px 12px; font-size: 1rem; border-radius: 8px; z-index: 10;
-            pointer-events: none; display: flex; align-items: center; gap: 0.375rem; white-space: nowrap;
-        }
+        .sold-out-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); background-color: rgba(0, 0, 0, 0.7); color: white; font-weight: bold; padding: 6px 12px; font-size: 1rem; border-radius: 8px; z-index: 10; pointer-events: none; display: flex; align-items: center; gap: 0.375rem; white-space: nowrap; }
         .sold-out-watermark svg { width: 1em; height: 1em; }
-        /* Transiciones para menús laterales */
         #sidenav, #cart-flyout { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
         #sidenav-overlay, #cart-overlay { transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
@@ -65,44 +48,35 @@
 
     <!-- Main Content -->
     <main class="flex-grow">
-        <!-- Contenedor ajustado para banner -->
         <div class="md:container md:mx-auto">
              <div class="md:w-[85%] md:mx-auto">
                 <!-- Banner Carousel -->
                 <section class="banner-carousel-container w-full md:rounded-lg overflow-hidden md:mt-8">
                     <div class="banner-carousel-track">
-                        <!-- Asegúrate que estas imágenes existan en /images/ -->
                         <div class="banner-carousel-slide"><img src="/images/banner-1-showhome.webp" alt="Banner 1" class="w-full h-auto"></div>
                         <div class="banner-carousel-slide"><img src="/images/banner-2-showhome.webp" alt="Banner 2" class="w-full h-auto"></div>
                         <div class="banner-carousel-slide"><img src="/images/banner-3-showhome.webp" alt="Banner 3" class="w-full h-auto"></div>
                         <div class="banner-carousel-slide"><img src="/images/banner-4-showhome.webp" alt="Banner 4" class="w-full h-auto"></div>
                     </div>
-                    <!-- Botones de navegación del carrusel -->
                     <button id="banner-prevBtn" class="absolute top-1/2 left-4 -translate-y-1/2 bg-white/50 hover:bg-white p-2 rounded-full shadow-md transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                     </button>
                     <button id="banner-nextBtn" class="absolute top-1/2 right-4 -translate-y-1/2 bg-white/50 hover:bg-white p-2 rounded-full shadow-md transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                     </button>
-                    <!-- Puntos indicadores del carrusel -->
                     <div id="banner-dots-container" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2"></div>
                 </section>
             </div>
         </div>
-
-        <!-- Sección de Productos Destacados -->
+        
         <section class="container mx-auto px-4 md:px-0 mt-8">
             <div class="md:w-[85%] md:mx-auto">
                 <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">Productos Destacados</h2>
-                <!-- Grid para mostrar los productos -->
                 <div id="product-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <!-- Mensaje de carga inicial -->
                     <div class="col-span-full text-center text-gray-500" id="loading-message">Cargando productos...</div>
-                    <!-- Las tarjetas de producto se insertarán aquí por JavaScript -->
                 </div>
-                <!-- Botón para ver todos los productos -->
                 <div class="text-center mt-8">
-                    <a href="all-products.html" class="inline-block bg-black text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-800 transition-colors">
+                    <a href="https://arelyshop.com/all-products" class="inline-block bg-black text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-800 transition-colors">
                         Ver Catálogo Completo
                     </a>
                 </div>
@@ -113,98 +87,69 @@
     <!-- Footer will be loaded here -->
     <div id="footer-placeholder"></div>
 
-    <!-- Enlace al archivo JavaScript principal -->
     <script src="/js/main.js"></script>
     <script>
-        // Escucha el evento personalizado que dispara main.js cuando todo está listo
         window.addEventListener('shared-components-loaded', ({ detail }) => {
-            const { allProducts, createProductCard } = detail; // Recibe los datos y funciones de main.js
+            const { allProducts, createProductCard } = detail;
+            
+            // --- PAGE-SPECIFIC LOGIC FOR INDEX.HTML ---
 
-            // --- LÓGICA ESPECÍFICA PARA ESTA PÁGINA (index.html) ---
-
-            // 1. Mostrar Productos Destacados
+            // 1. Display Featured Products
             const productGrid = document.getElementById('product-grid');
             if (productGrid) {
-                productGrid.innerHTML = ''; // Limpiar mensaje de carga
-                // Selecciona qué productos mostrar (ej. los primeros 10)
-                const featuredProducts = allProducts.slice(0, 10);
-                if (featuredProducts.length > 0) {
-                    featuredProducts.forEach(product => {
-                        productGrid.innerHTML += createProductCard(product); // Usa la función de main.js
-                    });
-                } else {
-                    productGrid.innerHTML = '<p class="col-span-full text-center text-gray-500">No hay productos destacados por el momento.</p>';
-                }
+                productGrid.innerHTML = ''; // Clear loading
+                const featuredProducts = allProducts.slice(0, 10); // Example: show first 10 as featured
+                featuredProducts.forEach(product => {
+                    productGrid.innerHTML += createProductCard(product);
+                });
             }
 
-            // 2. Lógica del Carrusel de Banners (si existe)
+            // 2. Banner Carousel Logic
             const bannerTrack = document.querySelector('.banner-carousel-track');
             if (bannerTrack) {
                 const bannerSlides = Array.from(bannerTrack.children);
                 const nextButton = document.getElementById('banner-nextBtn');
                 const prevButton = document.getElementById('banner-prevBtn');
                 const dotsContainer = document.getElementById('banner-dots-container');
-
-                if (bannerSlides.length > 0 && nextButton && prevButton && dotsContainer) {
+                if (bannerSlides.length > 0) {
                     let slideWidth = bannerSlides[0].getBoundingClientRect().width;
                     let currentIndex = 0;
-                    let intervalId = null; // Para el autoplay
-
-                    // Función para actualizar la posición del carrusel y los puntos
+                    
                     const updateCarousel = () => {
                         if(!bannerTrack) return;
                         bannerTrack.style.transform = `translateX(-${slideWidth * currentIndex}px)`;
-                        dots.forEach((dot, index) => dot.classList.toggle('bg-white', index === currentIndex)); // Punto activo blanco
+                        dots.forEach((dot, index) => dot.classList.toggle('bg-white', index === currentIndex));
                     };
-
-                    // Crear los puntos indicadores
-                    dotsContainer.innerHTML = ''; // Limpiar por si acaso
+                    
                     const dots = bannerSlides.map((_, index) => {
                         const dot = document.createElement('button');
-                        dot.classList.add('h-2', 'w-2', 'rounded-full', 'bg-white/50', 'transition', 'hover:bg-white');
-                        dot.addEventListener('click', () => {
-                            currentIndex = index;
-                            updateCarousel();
-                            resetAutoplay(); // Reiniciar autoplay al hacer clic manual
-                        });
+                        dot.classList.add('h-2', 'w-2', 'rounded-full', 'bg-white/50', 'transition');
+                        dot.addEventListener('click', () => { currentIndex = index; updateCarousel(); });
                         dotsContainer.appendChild(dot);
                         return dot;
                     });
 
-                    // Ajustar tamaño al redimensionar ventana
                     window.addEventListener('resize', () => {
                         slideWidth = bannerSlides[0].getBoundingClientRect().width;
-                        updateCarousel(); // Reajustar posición sin animación brusca
+                        updateCarousel();
                     });
-
-                    // Navegación con botones
+                    
                     prevButton.addEventListener('click', () => {
                         currentIndex = (currentIndex === 0) ? bannerSlides.length - 1 : currentIndex - 1;
                         updateCarousel();
-                        resetAutoplay();
                     });
 
                     nextButton.addEventListener('click', () => {
                         currentIndex = (currentIndex === bannerSlides.length - 1) ? 0 : currentIndex + 1;
                         updateCarousel();
-                        resetAutoplay();
                     });
-
-                    // Autoplay
-                    const startAutoplay = () => {
-                        intervalId = setInterval(() => nextButton.click(), 5000); // Cambia cada 5 segundos
-                    };
-
-                    const resetAutoplay = () => {
-                        clearInterval(intervalId);
-                        startAutoplay();
-                    };
-
-                    startAutoplay();
-                    updateCarousel(); // Mostrar estado inicial
+                    
+                    setInterval(() => nextButton.click(), 5000);
+                    updateCarousel();
                 }
             }
         });
     </script>
 </body>
 </html>
+
