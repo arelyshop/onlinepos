@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arelyshop.com - Todos los Productos</title>
+    
+    <!-- SEO and Social Sharing Meta Tags -->
+    <meta name="description" content="Visita Arelyshop.com y descubre los mejores accesorios y gadgets de UGREEN | BASEUS | ANKER para hacer tu día más fácil.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://arelyshop.com/all-products.html">
+    <meta property="og:title" content="Arelyshop.com - Catálogo Completo">
+    <meta property="og:description" content="Explora nuestro catálogo completo de accesorios y gadgets de las mejores marcas.">
+    <meta property="og:image" content="https://arelyshop.com/images/arelyshop-preview.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://arelyshop.com/all-products.html">
+    <meta name="twitter:title" content="Arelyshop.com - Catálogo Completo">
+    <meta name="twitter:description" content="Explora nuestro catálogo completo de accesorios y gadgets de las mejores marcas.">
+    <meta name="twitter:image" content="https://arelyshop.com/images/arelyshop-preview.webp">
+    
+    <link rel="icon" href="/images/favicon.svg" type="image/svg+xml">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes cart-bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        .cart-bounce-animation { animation: cart-bounce 0.5s ease; }
+        .product-title { height: 2.5em; line-height: 1.25em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; text-overflow: ellipsis; }
+        .search-results-container::-webkit-scrollbar { width: 8px; }
+        .search-results-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .search-results-container::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .search-results-container::-webkit-scrollbar-thumb:hover { background: #555; }
+        .sold-out-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); background-color: rgba(0, 0, 0, 0.7); color: white; font-weight: bold; padding: 6px 12px; font-size: 1rem; border-radius: 8px; z-index: 10; pointer-events: none; display: flex; align-items: center; gap: 0.375rem; white-space: nowrap; }
+        .sold-out-watermark svg { width: 1em; height: 1em; }
+        #sidenav, #cart-flyout { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        #sidenav-overlay, #cart-overlay { transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <!-- Header will be loaded here -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="flex-grow">
+        <div class="w-full md:container md:mx-auto md:mt-8">
+            <div class="md:w-[85%] md:mx-auto">
+                <div class="w-full md:rounded-lg overflow-hidden">
+                    <img src="/images/portada-catalogo.webp" alt="Portada del Catálogo" class="w-full h-auto">
+                </div>
+            </div>
+        </div>
+
+        <section class="container mx-auto px-4 md:px-0 mt-8">
+            <div class="md:w-[85%] md:mx-auto">
+                <h2 id="page-title" class="text-2xl font-bold text-center text-gray-800 mb-8">Todos los Productos</h2>
+                <div id="product-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div class="col-span-full text-center text-gray-500" id="loading-message">Cargando productos...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer will be loaded here -->
+    <div id="footer-placeholder"></div>
+    
+    <script src="/js/main.js"></script>
+    <script>
+        window.addEventListener('shared-components-loaded', ({ detail }) => {
+            const { allProducts, createProductCard } = detail;
+
+            // --- PAGE-SPECIFIC LOGIC FOR ALL-PRODUCTS.HTML ---
+            const urlParams = new URLSearchParams(window.location.search);
+            const category = urlParams.get('category');
+            const brand = urlParams.get('brand');
+            const searchTerm = urlParams.get('search');
+            const pageTitle = document.getElementById('page-title');
+            const productGrid = document.getElementById('product-grid');
+
+            let productsToDisplay = allProducts;
+
+            if (searchTerm) {
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                productsToDisplay = allProducts.filter(p => p.name.toLowerCase().includes(lowerCaseSearchTerm));
+                if (pageTitle) pageTitle.textContent = `Resultados para: "${searchTerm}"`;
+            } else if (category) {
+                productsToDisplay = allProducts.filter(p => p.category === category);
+                if (pageTitle) pageTitle.textContent = `Categoría: ${category}`;
+            } else if (brand) {
+                productsToDisplay = allProducts.filter(p => p.brand === brand);
+                if (pageTitle) pageTitle.textContent = `Marca: ${brand}`;
+            }
+            
+            productGrid.innerHTML = ''; // Clear loading
+            if (productsToDisplay.length > 0) {
+                productsToDisplay.forEach(product => {
+                    productGrid.innerHTML += createProductCard(product);
+                });
+            } else {
+                productGrid.innerHTML = '<p class="col-span-full text-center text-gray-500">No se encontraron productos que coincidan con tu búsqueda.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
