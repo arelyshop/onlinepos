@@ -1,183 +1,135 @@
-// --- GLOBAL APP STATE ---
-const API_BASE_URL = '/.netlify/functions';
-let currentUser = null;
-let allProducts = []; // Movido a global
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Lógica de Autenticación ---
+    const API_BASE_URL = '/.netlify/functions';
+    let currentUser = null;
 
-// --- GLOBAL NOTIFICATION FUNCTION ---
-const showNotification = (message, type = 'success') => {
-    const banner = document.getElementById('notification-banner');
-    const messageSpan = document.getElementById('notification-message');
-    if (!banner || !messageSpan) return;
-
-    messageSpan.textContent = message;
-    banner.className = 'fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-[60] rounded-lg shadow-lg'; // z-index alto
-    
-    if (type === 'success') {
-        banner.classList.add('bg-green-600');
-    } else {
-        banner.classList.add('bg-red-600');
-    }
-    
-    banner.style.transform = 'translateY(0)';
-    
-    setTimeout(() => {
-        banner.style.transform = 'translateY(-120%)';
-    }, 4000);
-};
-
-// --- AUTHENTICATION FUNCTIONS (from POS) ---
-
-function setupLoginListener() {
+    const loginContainer = document.getElementById('login-container');
+    const adminPanel = document.getElementById('admin-panel');
     const loginForm = document.getElementById('login-form');
-    if (!loginForm) return;
-
     const errorMessage = document.getElementById('error-message');
     const loginButton = document.getElementById('login-button');
     const buttonText = document.getElementById('login-button-text');
     const loader = document.getElementById('login-loader');
+    const logoutButton = document.getElementById('logout-button');
 
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        errorMessage.textContent = '';
-        buttonText.classList.add('hidden');
-        loader.classList.remove('hidden');
-        loginButton.disabled = true;
+    function setupLoginListener() {
+        if (!loginForm) return;
 
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(errorMessage) errorMessage.textContent = '';
+            if(buttonText) buttonText.classList.add('hidden');
+            if(loader) loader.classList.remove('hidden');
+            if(loginButton) loginButton.disabled = true;
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-            let result;
             try {
-                result = await response.json();
-            } catch (jsonError) {
-                 console.error("Respuesta del login no es JSON:", response.status, response.statusText);
-                 throw new Error(`Error ${response.status}: ${response.statusText || 'Respuesta inválida del servidor'}`);
-            }
+                // Esta es la llamada a tu función de backend login.js
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
 
-            if (response.ok && result.status === 'success') {
-                // Solo permitir roles 'admin' o 'vendedor' (ajusta si es necesario)
-                if (result.user.role === 'admin' || result.user.role === 'vendedor') {
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                     console.error("Respuesta del login no es JSON:", response.status, response.statusText);
+                     throw new Error(`Error ${response.status}: ${response.statusText || 'Respuesta inválida del servidor'}`);
+                }
+
+                if (response.ok && result.status === 'success') {
+                    // Solo permitir 'admin' en este panel
+                    if (result.user.role !== 'admin') {
+                        throw new Error('Acceso denegado. Se requiere rol de administrador.');
+                    }
                     sessionStorage.setItem('arelyShopUser', JSON.stringify(result.user));
                     currentUser = result.user;
                     initializeApp();
                 } else {
-                    errorMessage.textContent = 'No tienes permiso para acceder a este panel.';
+                    throw new Error(result.message || 'Credenciales incorrectas o error del servidor.');
                 }
-            } else {
-                errorMessage.textContent = result.message || 'Credenciales incorrectas o error del servidor.';
+            } catch (error) {
+                console.error('Error en el proceso de login:', error);
+                if(errorMessage) errorMessage.textContent = error.message;
+            } finally {
+                if(buttonText) buttonText.classList.remove('hidden');
+                if(loader) loader.classList.add('hidden');
+                if(loginButton) loginButton.disabled = false;
             }
-        } catch (error) {
-            console.error('Error en el proceso de login:', error);
-            errorMessage.textContent = error.message.includes('Failed to fetch') ? 'No se pudo conectar al servidor.' : error.message;
-        } finally {
-            buttonText.classList.remove('hidden');
-            loader.classList.add('hidden');
-            loginButton.disabled = false;
-        }
-    });
-}
+        });
+    }
 
-function checkAuth() {
-    const userString = sessionStorage.getItem('arelyShopUser');
-    if (userString) {
-        try {
-            currentUser = JSON.parse(userString);
-            // Validar rol para este panel
-            if (currentUser && currentUser.id && (currentUser.role === 'admin' || currentUser.role === 'vendedor')) {
-                initializeApp();
-            } else {
-                console.warn("Usuario sin permisos o datos inválidos.");
-                logout(false); // Logout sin recargar
+    function checkAuth() {
+        const userString = sessionStorage.getItem('arelyShopUser');
+        if (userString) {
+            try {
+                currentUser = JSON.parse(userString);
+                // Validar rol de admin
+                if (currentUser && currentUser.id && currentUser.username && currentUser.role === 'admin') {
+                    initializeApp();
+                } else {
+                    logout(); // Rol no válido o datos corruptos
+                }
+            } catch (e) {
+                logout();
             }
-        } catch (e) {
-            console.error("Error parseando datos de usuario:", e);
-            logout(false);
+        } else {
+             if (adminPanel) adminPanel.classList.add('hidden');
+             if (loginContainer) loginContainer.classList.remove('hidden');
         }
-    } else {
-         // Asegurarse que el panel esté oculto si no hay sesión
-        const appContainer = document.getElementById('admin-panel');
-        if (appContainer) appContainer.classList.add('hidden');
-        const loginContainer = document.getElementById('login-container');
+    }
+
+    function logout() {
+        sessionStorage.removeItem('arelyShopUser');
+        currentUser = null;
+        if (adminPanel) adminPanel.classList.add('hidden');
         if (loginContainer) loginContainer.classList.remove('hidden');
+        // Opcional: recargar para limpiar todo el estado
+        // window.location.reload(); 
     }
-}
 
-function logout(reload = true) {
-    sessionStorage.removeItem('arelyShopUser');
-    currentUser = null;
-    allProducts = []; // Limpiar estado global
+    function initializeApp() {
+        if (!currentUser) return; // Doble chequeo
 
-     // Ocultar admin panel, mostrar login
-     const appContainer = document.getElementById('admin-panel');
-     if (appContainer) {
-         appContainer.classList.add('hidden');
-         appContainer.classList.remove('flex');
-     }
-     const loginContainer = document.getElementById('login-container');
-     if (loginContainer) {
-         loginContainer.classList.remove('hidden');
-         loginContainer.classList.add('flex');
-     }
+        // Ocultar login, mostrar panel
+        if (loginContainer) loginContainer.classList.add('hidden');
+        if (adminPanel) adminPanel.classList.remove('hidden');
+        if (adminPanel) adminPanel.classList.add('flex');
+
+        // Mostrar info de usuario en el header
+        const userFullnameEl = document.getElementById('user-fullname');
+        const userRoleEl = document.getElementById('user-role');
+        if (userFullnameEl) userFullnameEl.textContent = currentUser.full_name || 'Admin';
+        if (userRoleEl) userRoleEl.textContent = currentUser.role || 'admin';
+
+        // Iniciar la lógica específica del panel de administración
+        initializeAdminLogic();
+    }
+
+    // Registrar listener de logout
+    if (logoutButton) logoutButton.addEventListener('click', logout);
     
-     if(reload) {
-        window.location.reload();
-     }
-}
-
-// --- APP INITIALIZATION ---
-
-function initializeApp() {
-    // 1. Ocultar login, mostrar panel de admin
-    const loginContainer = document.getElementById('login-container');
-    if (loginContainer) {
-        loginContainer.classList.add('hidden');
-        loginContainer.classList.remove('flex');
-    }
-    const appContainer = document.getElementById('admin-panel');
-    if (appContainer) {
-        appContainer.classList.remove('hidden');
-        appContainer.classList.add('flex'); // El panel de admin usa flex
-    }
-
-    // 2. Poner info del usuario en el header
-    const userFullnameEl = document.getElementById('user-fullname');
-    const userRoleEl = document.getElementById('user-role');
-    if (userFullnameEl) userFullnameEl.textContent = currentUser.full_name || 'Usuario';
-    if (userRoleEl) userRoleEl.textContent = currentUser.role || 'Rol';
-
-    // 3. Añadir listener al botón de logout
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) logoutButton.addEventListener('click', () => logout(true));
-
-    // 4. Iniciar la lógica específica del panel de admin
-    initializeAdminLogic();
-}
-
-
-// --- DOMContentLoaded (Modificado) ---
-document.addEventListener('DOMContentLoaded', () => {
+    // Iniciar listeners de login y chequeo de autenticación
     setupLoginListener();
     checkAuth();
-});
+
+    // --- FIN Lógica de Autenticación ---
 
 
-// --- LÓGICA ORIGINAL DEL PANEL DE ADMIN ---
-function initializeAdminLogic() {
-    // --- STATE ---
-    // allProducts ahora es global
-    let currentProductId = null;
-    let html5QrCode = null;
-    let currentScannerTarget = null;
-    let sortable = null;
+    // La lógica del panel de administración se inicializa desde initializeApp()
+    function initializeAdminLogic() {
+        // --- STATE ---
+        let allProducts = [];
+        let currentProductId = null;
+        let html5QrCode = null;
+        let currentScannerTarget = null;
+        let sortable = null;
 
-    // --- ELEMENT SELECTORS ---
+        // --- ELEMENT SELECTORS ---
         const productForm = document.getElementById('product-form');
         const productFormContainer = document.getElementById('product-form-container');
         const productListContainer = document.getElementById('product-list-container');
@@ -211,13 +163,33 @@ function initializeAdminLogic() {
         const importCsvBtn = document.getElementById('import-csv-btn');
         const csvLogs = document.getElementById('csv-logs');
 
+        // La URL de la API ya está definida globalmente (API_BASE_URL)
+        const API_URL = `${API_BASE_URL}/products`; // Endpoint RESTful de productos
 
-    const API_URL = '/.netlify/functions/products'; // RESTful endpoint
+        // --- FUNCTIONS ---
+        
+        const showNotification = (message, type = 'success') => {
+            const banner = document.getElementById('notification-banner');
+            const messageSpan = document.getElementById('notification-message');
+            if (!banner || !messageSpan) return;
 
-    // --- FUNCTIONS ---
-    // showNotification ahora es global
-    
-    const updateImageNumbers = () => {
+            messageSpan.textContent = message;
+            banner.className = 'fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg'; // Reset classes
+            
+            if (type === 'success') {
+                banner.classList.add('bg-green-600');
+            } else {
+                banner.classList.add('bg-red-600');
+            }
+            
+            banner.style.transform = 'translateY(0)';
+            
+            setTimeout(() => {
+                banner.style.transform = 'translateY(-120%)';
+            }, 4000);
+        };
+
+        const updateImageNumbers = () => {
             const imageItems = imageSortableList.querySelectorAll('div[data-url]');
             imageItems.forEach((item, index) => {
                 const numberEl = item.querySelector('.image-number');
@@ -248,7 +220,7 @@ function initializeAdminLogic() {
 
             div.innerHTML = `
                 <span class="image-number text-sm font-semibold text-gray-400 w-5 text-center"></span>
-                <svg class="w-5 h-5 text-gray-400 drag-handle" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                <svg class="w-7 h-7 text-gray-400 drag-handle" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 <img src="${url}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/1f2937/9ca3af?text=Err';" class="w-10 h-10 rounded-md object-cover bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity">
                 <p class="flex-grow text-sm text-gray-300 truncate">${url}</p>
                 <button type="button" class="text-xl text-red-400 hover:text-red-300 remove-image-btn">&times;</button>
@@ -303,11 +275,12 @@ function initializeAdminLogic() {
         const fetchAndRenderProducts = async () => {
             try {
                 productListEl.innerHTML = '<p class="text-gray-400">Cargando productos...</p>';
-                const response = await fetch(API_URL); // GET request
+                // Esta es la llamada a tu función de backend products.js (GET)
+                const response = await fetch(API_URL); 
                 if (!response.ok) throw new Error('Failed to fetch products');
                 const result = await response.json();
                 if (result.status === 'success') {
-                    allProducts = result.data;
+                    allProducts = result.data; // Los datos vendrán de tu función 'products.js'
                     renderProductList(allProducts);
                 } else {
                     throw new Error(result.message || 'Error from server');
@@ -320,6 +293,11 @@ function initializeAdminLogic() {
         };
 
         const renderProductList = (products) => {
+            if (!products || products.length === 0) {
+                 productListEl.innerHTML = '<p class="text-gray-500">No hay productos. Comienza agregando uno.</p>';
+                 return;
+            }
+            
             const searchTerm = searchInput.value.toLowerCase().trim();
             const filteredProducts = products.filter(p =>
                 p.name.toLowerCase().includes(searchTerm) ||
@@ -448,6 +426,7 @@ function initializeAdminLogic() {
             const method = isUpdating ? 'PUT' : 'POST';
 
             try {
+                // Esta es la llamada a tu función de backend products.js (POST o PUT)
                 const response = await fetch(API_URL, {
                     method,
                     body: JSON.stringify({ data: productData }),
@@ -480,6 +459,7 @@ function initializeAdminLogic() {
             deleteBtn.disabled = true;
             deleteBtn.textContent = 'Eliminando...';
             try {
+                 // Esta es la llamada a tu función de backend products.js (DELETE)
                 const response = await fetch(API_URL, {
                     method: 'DELETE',
                     body: JSON.stringify({ id: productIdToDelete }),
@@ -560,6 +540,7 @@ function initializeAdminLogic() {
             }
         }
 
+
         function closeImagePreview() {
             imagePreviewModal.classList.add('hidden');
             previewImage.src = '';
@@ -605,7 +586,8 @@ function initializeAdminLogic() {
 
                     logContainer.textContent += `Enviando ${products.length} productos al servidor...\n`;
                     try {
-                        const response = await fetch('/.netlify/functions/products-batch', {
+                         // Esta es la llamada a tu función de backend products-batch.js
+                        const response = await fetch(`${API_BASE_URL}/products-batch`, {
                             method: 'POST',
                             body: JSON.stringify({ products }),
                             headers: { 'Content-Type': 'application/json' }
@@ -623,7 +605,7 @@ function initializeAdminLogic() {
                     } finally {
                         importCsvBtn.disabled = false;
                         importCsvBtn.textContent = 'Importar CSV';
-                        csvFileInput.value = '';
+csvFileInput.value = '';
                     }
                 },
                 error: (error) => {
@@ -658,6 +640,7 @@ function initializeAdminLogic() {
         productListEl.addEventListener('click', (event) => {
             const productElement = event.target.closest('[data-id]');
             if (productElement) {
+                // ParseInt para asegurar que el ID es un número
                 populateFormForEdit(parseInt(productElement.dataset.id, 10));
             }
         });
@@ -701,7 +684,7 @@ function initializeAdminLogic() {
         importCsvBtn.addEventListener('click', handleCsvUpload);
 
         // --- INITIALIZATION ---
-        fetchAndRenderProducts();
+        fetchAndRenderProducts(); // Carga productos cuando la lógica del admin inicia
         createNewSingleImageInput(); // Create the first single image input
         sortable = new Sortable(imageSortableList, {
             animation: 150,
@@ -719,5 +702,4 @@ function initializeAdminLogic() {
         }
     }
 });
-
 
