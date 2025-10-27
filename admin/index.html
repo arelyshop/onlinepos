@@ -34,9 +34,44 @@
         <span id="notification-message"></span>
     </div>
 
+    <!-- Login Screen (Copiado de POS) -->
+    <div id="login-container" class="flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+        <div class="max-w-md w-full space-y-8 p-10 rounded-xl shadow-lg border border-gray-700" style="background-color: #202c34;">
+            <div>
+                <img class="mx-auto h-10 sm:h-12 w-auto" src="/images/logo-escritorio.svg" alt="ArelyShop">
+                <div class="flex justify-center mt-4">
+                     <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#e3e3e3"><path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z"/></svg>
+                </div>
+                <h2 class="mt-4 text-center text-3xl font-extrabold text-gray-100">
+                    Panel de Admin
+                </h2>
+            </div>
+            <form id="login-form" class="mt-8 space-y-6">
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <div>
+                        <label for="username" class="sr-only">Usuario</label>
+                        <input id="username" name="username" type="text" autocomplete="username" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Usuario">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">Contraseña</label>
+                        <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" placeholder="Contraseña">
+                    </div>
+                </div>
 
-    <!-- Main Admin Content -->
-    <div id="admin-panel" class="flex h-screen bg-gray-900">
+                <div>
+                    <button type="submit" id="login-button" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <span id="login-button-text">Ingresar</span>
+                        <div id="login-loader" class="loader hidden"></div>
+                    </button>
+                </div>
+                <p id="error-message" class="mt-2 text-center text-sm text-red-600"></p>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Main Admin Content (Ahora oculto por defecto) -->
+    <div id="admin-panel" class="hidden h-screen bg-gray-900"> <!-- Modificado: 'flex' a 'hidden' -->
         <div class="flex h-full w-full">
             <!-- Sidebar -->
             <div class="hidden md:flex flex-col w-64 bg-gray-800 border-r border-gray-700 flex-shrink-0"> <!-- Añadido flex-shrink-0 -->
@@ -68,7 +103,17 @@
             <div class="flex flex-col flex-grow">
                 <header class="flex items-center justify-between h-16 bg-gray-800 border-b border-gray-700 px-6 flex-shrink-0"> <!-- Añadido flex-shrink-0 -->
                     <h1 class="text-xl font-bold text-white">Gestionar Productos</h1>
-                    <!-- Login/Logout eliminado -->
+                    <!-- Info de Usuario y Logout (Añadido) -->
+                    <div class="flex items-center space-x-4">
+                        <div id="user-info" class="text-right">
+                             <p class="font-semibold text-sm" id="user-fullname"></p>
+                             <p class="text-xs text-gray-400" id="user-role"></p>
+                        </div>
+                        <button id="logout-button" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3" class="mr-1"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
+                            Salir
+                        </button>
+                    </div>
                 </header>
 
                 <div class="flex-grow p-6 overflow-auto"> <!-- Contenedor principal con overflow -->
