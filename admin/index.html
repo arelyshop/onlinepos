@@ -16,25 +16,22 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #1a202c; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #718096; }
-        /* Ajustes para el lector QR si es necesario */
         #reader__dashboard_section_csr { display: flex; flex-direction: column; align-items: center; }
         #reader__dashboard_section_csr button { background-color: #4a5568; color: white; padding: 8px 16px; border-radius: 8px; margin-top: 10px; }
         .sortable-ghost { opacity: 0.4; background: #2d3748; }
         .drag-handle { cursor: move; }
         #notification-banner {
             transition: transform 0.5s ease-in-out;
-            transform: translateY(-120%); /* Start further up */
+            transform: translateY(-120%);
         }
+        /* Estilos para el Loader de Login */
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3b82f6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-300">
 
-    <!-- Notification Banner -->
-    <div id="notification-banner" class="fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-[60] rounded-lg shadow-lg"> <!-- Aumentado z-index -->
-        <span id="notification-message"></span>
-    </div>
-
-    <!-- Login Screen (Copiado de POS) -->
+    <!-- Pantalla de Login -->
     <div id="login-container" class="flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div class="max-w-md w-full space-y-8 p-10 rounded-xl shadow-lg border border-gray-700" style="background-color: #202c34;">
             <div>
@@ -43,7 +40,7 @@
                      <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#e3e3e3"><path d="M480-120v-80h280v-560H480v-80h280q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H480Zm-80-160-55-58 102-102H120v-80h327L345-622l55-58 200 200-200 200Z"/></svg>
                 </div>
                 <h2 class="mt-4 text-center text-3xl font-extrabold text-gray-100">
-                    Panel de Admin
+                    Panel de Administración
                 </h2>
             </div>
             <form id="login-form" class="mt-8 space-y-6">
@@ -69,45 +66,46 @@
         </div>
     </div>
 
+    <!-- Banner de Notificación -->
+    <div id="notification-banner" class="fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg">
+        <span id="notification-message"></span>
+    </div>
 
-    <!-- Main Admin Content (Ahora oculto por defecto) -->
-    <div id="admin-panel" class="hidden h-screen bg-gray-900"> <!-- Modificado: 'flex' a 'hidden' -->
+    <!-- Panel de Administración (Oculto por defecto) -->
+    <div id="admin-panel" class="hidden flex h-screen bg-gray-900">
         <div class="flex h-full w-full">
             <!-- Sidebar -->
-            <div class="hidden md:flex flex-col w-64 bg-gray-800 border-r border-gray-700 flex-shrink-0"> <!-- Añadido flex-shrink-0 -->
-                <div class="flex items-center justify-center h-16 bg-gray-900 flex-shrink-0"> <!-- Añadido flex-shrink-0 -->
+            <div class="hidden md:flex flex-col w-64 bg-gray-800 border-r border-gray-700">
+                <div class="flex items-center justify-center h-16 bg-gray-900">
                     <img src="/images/logo-escritorio.svg" alt="Arelyshop Admin" class="h-10">
                 </div>
-                <div class="flex flex-col flex-grow overflow-y-auto"> <!-- Añadido overflow-y-auto -->
+                <div class="flex flex-col flex-grow">
                     <nav class="flex-grow px-4 pb-4">
                         <a href="#" class="flex items-center mt-4 px-4 py-2 text-white bg-blue-600 rounded-lg">
-                            <!-- Icono Gestionar Productos Actualizado -->
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3" class="w-6 h-6 mr-3"><path d="M440-183v-274L200-596v274l240 139Zm80 0 240-139v-274L520-457v274Zm-80 92L160-252q-19-11-29.5-29T120-321v-318q0-22 10.5-40t29.5-29l280-161q19-11 40-11t40 11l280 161q19 11 29.5 29t10.5 40v318q0 22-10.5 40T800-252L520-91q-19 11-40 11t-40-11Zm200-528 77-44-237-137-78 45 238 136Zm-160 93 78-45-237-137-78 45 237 137Z"/></svg>
+                            <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
                             <span class="font-medium">Gestionar Productos</span>
                         </a>
-                        <a href="/pos/" class="flex items-center mt-4 px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-lg">
-                            <!-- Icono Ir al POS (w-6 h-6) -->
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor" class="w-6 h-6 mr-3"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm0-80h400v-80H280v80ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
-                            <span class="font-medium">Ir al POS</span>
-                        </a>
-                         <a href="/" class="flex items-center mt-4 px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-lg">
-                            <!-- Icono Ir a la Tienda (w-6 h-6) -->
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor" class="w-6 h-6 mr-3"><path d="M841-518v318q0 33-23.5 56.5T761-120H201q-33 0-56.5-23.5T121-200v-318q-23-21-35.5-54t-.5-72l42-136q8-26 28.5-43t47.5-17h556q27 0 47 16.5t29 43.5l42 136q12 39-.5 71T841-518Zm-272-42q27 0 41-18.5t11-41.5l-22-140h-78v148q0 21 14 36.5t34 15.5Zm-180 0q23 0 37.5-15.5T441-612v-148h-78l-22 140q-4 24 10.5 42t37.5 18Zm-178 0q18 0 31.5-13t16.5-33l22-154h-78l-40 134q-6 20 6.5 43t41.5 23Zm540 0q29 0 42-23t6-43l-42-134h-76l22 154q3 20 16.5 33t31.5 13ZM201-200h560v-282q-5 2-6.5 2H751q-27 0-47.5-9T663-518q-18 18-41 28t-49 10q-27 0-50.5-10T481-518q-17 18-39.5 28T393-480q-29 0-52.5-10T299-518q-21 21-41.5 29.5T211-480h-4.5q-2.5 0-5.5-2v282Zm560 0H201h560Z"/></svg>
+                        <a href="/" class="flex items-center mt-4 px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-lg">
+                            <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 M 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                             <span class="font-medium">Ir a la Tienda</span>
                         </a>
                     </nav>
                 </div>
             </div>
 
-            <!-- Main content -->
+            <!-- Contenido Principal -->
             <div class="flex flex-col flex-grow">
-                <header class="flex items-center justify-between h-16 bg-gray-800 border-b border-gray-700 px-6 flex-shrink-0"> <!-- Añadido flex-shrink-0 -->
-                    <h1 class="text-xl font-bold text-white">Gestionar Productos</h1>
-                    <!-- Info de Usuario y Logout (Añadido) -->
+                <header class="flex items-center justify-between h-16 bg-gray-800 border-b border-gray-700 px-6">
+                    <div class="flex items-center">
+                        <!-- Logo para Móvil/Header -->
+                        <img src="/images/logo-escritorio.svg" alt="Arelyshop Admin" class="h-8 md:h-10 mr-4">
+                        <h1 class="text-xl font-bold text-white">Gestionar Productos</h1>
+                    </div>
+                     <!-- Info de Usuario y Botón Salir -->
                     <div class="flex items-center space-x-4">
                         <div id="user-info" class="text-right">
-                             <p class="font-semibold text-sm" id="user-fullname"></p>
-                             <p class="text-xs text-gray-400" id="user-role"></p>
+                            <p class="font-semibold text-sm" id="user-fullname"></p>
+                            <p class="text-xs text-gray-400" id="user-role"></p>
                         </div>
                         <button id="logout-button" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3" class="mr-1"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></svg>
@@ -116,12 +114,12 @@
                     </div>
                 </header>
 
-                <div class="flex-grow p-6 overflow-auto"> <!-- Contenedor principal con overflow -->
-                   <!-- CSV Import Section -->
-                    <div class="mb-6 bg-gray-800 p-6 rounded-lg border border-gray-700 flex-shrink-0"> <!-- Añadido flex-shrink-0 -->
+                <div class="flex-grow p-6 overflow-auto">
+                   <!-- Sección de Importar CSV -->
+                    <div class="mb-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
                         <h2 class="text-2xl font-bold text-white mb-4">Importar Productos desde CSV</h2>
-                        <div class="flex flex-wrap items-center gap-4">
-                            <input type="file" id="csv-file-input" accept=".csv" class="block w-full sm:w-auto text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer flex-grow">
+                        <div class="flex items-center space-x-4">
+                            <input type="file" id="csv-file-input" accept=".csv" class="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
                             <button id="import-csv-btn" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap disabled:bg-gray-500" disabled>Importar CSV</button>
                         </div>
                         <div id="csv-logs" class="mt-4 bg-gray-900 p-4 rounded-lg h-48 overflow-y-auto custom-scrollbar hidden">
@@ -130,16 +128,15 @@
                     </div>
 
                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Columna Lista de Productos -->
-                    <div id="product-list-container" class="lg:col-span-1 bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col max-h-[calc(100vh-22rem)]"> <!-- Ajustada altura máxima -->
-                        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <div id="product-list-container" class="lg:col-span-1 bg-gray-800 p-6 rounded-lg border border-gray-700 flex flex-col lg:h-[85vh]">
+                        <div class="flex justify-between items-center mb-4">
                             <h2 class="text-2xl font-bold text-white">Lista de Productos</h2>
                             <button id="new-product-btn" class="text-sm bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                                + Nuevo
+                                + Nuevo Producto
                             </button>
                         </div>
-                        <div class="relative mb-4 flex-shrink-0">
-                            <input type="text" id="search-product-input" placeholder="Buscar..." class="w-full pl-4 pr-12 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div class="relative mb-4">
+                            <input type="text" id="search-product-input" placeholder="Buscar por nombre, SKU o código..." class="w-full pl-4 pr-12 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                              <button id="scan-search-btn" class="absolute top-0 right-0 inline-flex items-center justify-center h-full w-12 text-gray-400 hover:text-white">
                                 <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
                             </button>
@@ -149,27 +146,28 @@
                         </div>
                     </div>
 
-                    <!-- Columna Formulario de Producto -->
-                    <div id="product-form-container" class="hidden lg:block lg:col-span-2 bg-gray-800 p-6 rounded-lg border border-gray-700 max-h-[calc(100vh-22rem)] overflow-y-auto custom-scrollbar"> <!-- Ajustada altura máxima y overflow -->
-                        <div class="flex justify-between items-center mb-4 flex-shrink-0">
+                    <div id="product-form-container" class="hidden lg:block lg:col-span-2 bg-gray-800 p-6 rounded-lg border border-gray-700 lg:h-[85vh] overflow-y-auto custom-scrollbar">
+                        <div class="flex justify-between items-center mb-4">
                             <h2 id="form-title" class="text-2xl font-bold text-white">Agregar Nuevo Producto</h2>
-                            <button type="button" id="back-to-list-btn" class="lg:hidden text-sm bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 transition-colors hidden">
-                                &larr; Volver
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" id="back-to-list-btn" class="lg:hidden text-sm bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 transition-colors hidden">
+                                    &larr; Volver a la Lista
+                                </button>
+                            </div>
                         </div>
 
                         <form id="product-form">
                             <input type="hidden" id="id" name="id">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label for="name" class="block text-gray-300 font-semibold mb-2">Nombre</label>
+                                    <label for="name" class="block text-gray-300 font-semibold mb-2">Nombre del Producto</label>
                                     <input type="text" id="name" name="name" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg" required>
                                 </div>
                                 <div>
                                     <label for="sku" class="block text-gray-300 font-semibold mb-2">SKU</label>
                                     <div class="flex items-center space-x-2">
                                         <input type="text" id="sku" name="sku" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
-                                        <button type="button" id="suggest-sku-btn" class="text-sm bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 whitespace-nowrap">Sugerir</button>
+                                        <button type="button" id="suggest-sku-btn" class="text-sm bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 transition-colors whitespace-nowrap">Sugerir</button>
                                     </div>
                                 </div>
                                 <div class="md:col-span-2">
@@ -177,19 +175,19 @@
                                     <textarea id="description" name="description" rows="4" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg"></textarea>
                                 </div>
                                 <div>
-                                    <label for="sale_price" class="block text-gray-300 font-semibold mb-2">P. Venta</label>
+                                    <label for="sale_price" class="block text-gray-300 font-semibold mb-2">Precio Venta (Bs.)</label>
                                     <input type="number" step="0.01" id="sale_price" name="sale_price" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg" required>
                                 </div>
                                 <div>
-                                    <label for="discount_price" class="block text-gray-300 font-semibold mb-2">P. Oferta</label>
+                                    <label for="discount_price" class="block text-gray-300 font-semibold mb-2">Precio Oferta (Bs.)</label>
                                     <input type="number" step="0.01" id="discount_price" name="discount_price" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
                                 </div>
                                 <div>
-                                    <label for="purchase_price" class="block text-gray-300 font-semibold mb-2">P. Compra</label>
+                                    <label for="purchase_price" class="block text-gray-300 font-semibold mb-2">Precio Compra (Bs.)</label>
                                     <input type="number" step="0.01" id="purchase_price" name="purchase_price" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
                                 </div>
                                 <div>
-                                    <label for="wholesale_price" class="block text-gray-300 font-semibold mb-2">P. Mayoreo</label>
+                                    <label for="wholesale_price" class="block text-gray-300 font-semibold mb-2">Precio Mayoreo (Bs.)</label>
                                     <input type="number" step="0.01" id="wholesale_price" name="wholesale_price" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
                                 </div>
                                  <div>
@@ -197,76 +195,111 @@
                                     <input type="number" id="stock" name="stock" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg" required>
                                 </div>
                                 <div>
-                                    <label for="ciudad_sucursal" class="block text-gray-300 font-semibold mb-2">Sucursal</label>
+                                    <label for="ciudad_sucursal" class="block text-gray-300 font-semibold mb-2">Ciudad/Sucursal</label>
                                     <select id="ciudad_sucursal" name="ciudad_sucursal" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
-                                        <option value="">Seleccionar...</option>
-                                        <option>Beni</option><option>Sucre</option><option>Cochabamba</option>
-                                        <option>La Paz</option><option>Oruro</option><option>Pando</option>
-                                        <option>Potosí</option><option>Santa Cruz</option><option>El Alto</option>
+                                        <option value="">Seleccionar sucursal...</option>
+                                        <option>Beni</option>
+                                        <option>Sucre</option>
+                                        <option>Cochabamba</option>
+                                        <option>La Paz</option>
+                                        <option>Oruro</option>
+                                        <option>Pando</option>
+                                        <option>Potosí</option>
+                                        <option>Santa Cruz</option>
+                                        <option>El Alto</option>
                                         <option>Tarija</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label for="category-select" class="block text-gray-300 font-semibold mb-2">Categoría</label>
                                     <select id="category-select" name="category-select" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
-                                        <option value="">Seleccionar...</option>
-                                        <option>Cargadores</option><option>Cables & Conectores</option>
-                                        <option>Hubs & Adaptadores</option><option>Powerbanks</option>
-                                        <option>Mochilas & Fundas</option><option>Accesorios para Laptop</option>
-                                        <option>Audio & Video</option><option>Teclados & Mouse</option>
-                                        <option>Organizadores & Neceseres</option><option>Juguetes & Niños</option>
-                                        <option>Herramientas</option><option>Mascotas</option>
+                                        <option value="">Seleccionar categoría...</option>
+                                        <option>Cargadores</option>
+                                        <option>Cables & Conectores</option>
+                                        <option>Hubs & Adaptadores</option>
+                                        <option>Powerbanks</option>
+                                        <option>Mochilas & Fundas</option>
+                                        <option>Accesorios para Laptop</option>
+                                        <option>Audio & Video</option>
+                                        <option>Teclados & Mouse</option>
+                                        <option>Organizadores & Neceseres</option>
+                                        <option>Juguetes & Niños</option>
+                                        <option>Herramientas</option>
+                                        <option>Mascotas</option>
                                         <option value="custom">Otra...</option>
                                     </select>
-                                    <input type="text" id="category-custom" name="category-custom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg mt-2 hidden" placeholder="Categoría personalizada">
+                                    <input type="text" id="category-custom" name="category-custom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg mt-2 hidden" placeholder="Escribir categoría personalizada">
                                 </div>
                                  <div>
                                     <label for="brand-select" class="block text-gray-300 font-semibold mb-2">Marca</label>
                                     <select id="brand-select" name="brand-select" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
-                                        <option value="">Seleccionar...</option>
-                                        <option>UGREEN</option><option>BASEUS</option><option>ANKER</option>
-                                        <option>HAVIT</option><option>TP-LINK</option><option>KLIP-XTREME</option>
-                                        <option>DIMAX</option><option>MAONO</option><option>AMAZON</option>
-                                        <option>BOYA</option><option>NETAC</option><option>BLACKVIEW</option>
-                                        <option>ORICO</option><option>BELKIN</option><option>VENTION</option>
-                                        <option>BENFEI</option><option>UNI</option><option>Marca blanca</option>
+                                        <option value="">Seleccionar marca...</option>
+                                        <option>UGREEN</option>
+                                        <option>BASEUS</option>
+                                        <option>ANKER</option>
+                                        <option>HAVIT</option>
+                                        <option>TP-LINK</option>
+                                        <option>KLIP-XTREME</option>
+                                        <option>DIMAX</option>
+                                        <option>MAONO</option>
+                                        <option>AMAZON</option>
+                                        <option>BOYA</option>
+                                        <option>NETAC</option>
+                                        <option>BLACKVIEW</option>
+                                        <option>ORICO</option>
+                                        <option>BELKIN</option>
+                                        <option>VENTION</option>
+                                        <option>BENFEI</option>
+                                        <option>UNI</option>
                                         <option value="custom">Otra...</option>
                                     </select>
-                                    <input type="text" id="brand-custom" name="brand-custom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg mt-2 hidden" placeholder="Marca personalizada">
+                                    <input type="text" id="brand-custom" name="brand-custom" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg mt-2 hidden" placeholder="Escribir marca personalizada">
                                 </div>
                                 <div>
-                                    <label for="barcode" class="block text-gray-300 font-semibold mb-2">Cód. Barras</label>
+                                    <label for="barcode" class="block text-gray-300 font-semibold mb-2">Código de Barras</label>
                                     <div class="flex items-center space-x-2">
                                         <input type="text" id="barcode" name="barcode" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg">
-                                        <button type="button" id="scan-barcode-btn" class="text-sm bg-gray-600 text-white font-bold p-2.5 rounded-lg hover:bg-gray-500">
+                                        <button type="button" id="scan-barcode-btn" class="text-sm bg-gray-600 text-white font-bold p-2.5 rounded-lg hover:bg-gray-500 transition-colors">
                                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
                                         </button>
                                     </div>
                                 </div>
                                 <div class="md:col-span-2">
-                                    <label class="block text-gray-300 font-semibold mb-2">Fotos</label>
+                                    <label class="block text-gray-300 font-semibold mb-2">Gestión de Fotos</label>
                                     <div class="bg-gray-700 p-4 rounded-lg space-y-4">
                                         <div>
-                                            <label for="image-url-list" class="block text-gray-300 text-sm font-semibold mb-2">Pegar URLs (separadas por coma)</label>
-                                            <textarea id="image-url-list" rows="3" class="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded-lg mb-2" placeholder="https://.../img1.jpg, ..."></textarea>
-                                            <button type="button" id="process-urls-btn" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700">Agregar de Lista</button>
+                                            <label for="image-url-list" class="block text-gray-300 text-sm font-semibold mb-2">Pegar lista de URLs (separadas por coma)</label>
+                                            <textarea id="image-url-list" rows="3" class="w-full px-3 py-2 bg-gray-600 border border-gray-500 text-white rounded-lg mb-2" placeholder="https://.../img1.jpg, https://.../img2.jpg"></textarea>
+                                            <button type="button" id="process-urls-btn" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
+                                                Agregar Fotos desde Lista
+                                            </button>
                                         </div>
                                         <div>
-                                            <label class="block text-gray-300 text-sm font-semibold mb-2">Agregar URL individual</label>
-                                            <div id="single-image-inputs-container" class="space-y-2"></div>
-                                            <button type="button" id="add-single-url-field-btn" class="mt-2 text-sm bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 w-full">+ Campo URL</button>
+                                            <label class="block text-gray-300 text-sm font-semibold mb-2">Agregar URL de foto individualmente</label>
+                                            <div id="single-image-inputs-container" class="space-y-2">
+                                                <!-- Dynamic single URL inputs will be added here -->
+                                            </div>
+                                            <button type="button" id="add-single-url-field-btn" class="mt-2 text-sm bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 transition-colors w-full">
+                                                + Agregar campo para URL individual
+                                            </button>
                                         </div>
                                         <div>
-                                            <label class="block text-gray-300 text-sm font-semibold mb-2">Fotos (Arrastra para reordenar)</label>
-                                            <div id="image-sortable-list" class="space-y-2 min-h-[50px] p-2 bg-gray-900/50 rounded-md"></div>
+                                            <label class="block text-gray-300 text-sm font-semibold mb-2">Fotos actuales (Arrastra para reordenar)</label>
+                                            <div id="image-sortable-list" class="space-y-2 min-h-[50px] p-2 bg-gray-900/50 rounded-md">
+                                                <!-- Draggable image items will be injected here -->
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <!-- Action Buttons -->
-                            <div class="mt-8 flex items-center justify-between flex-shrink-0"> <!-- Añadido flex-shrink-0 -->
-                                <button id="save-btn" type="submit" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700">Guardar</button>
-                                <button id="delete-btn" type="button" class="hidden bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700">Eliminar</button>
+                            <div class="mt-8 flex items-center justify-between">
+                                <button id="save-btn" type="submit" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                                    Guardar Producto
+                                </button>
+                                <button id="delete-btn" type="button" class="hidden bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition-colors">
+                                    Eliminar Producto
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -275,21 +308,21 @@
             </div>
         </div>
     </div>
-
+    
     <!-- Barcode Scanner Modal -->
     <div id="scanner-container" class="fixed inset-0 bg-black bg-opacity-75 flex-col items-center justify-center hidden z-50 p-4">
         <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md border border-gray-700">
-            <h3 class="text-xl font-bold mb-4 text-center text-white">Escanear Código</h3>
-            <div id="reader" class="w-full rounded-lg overflow-hidden"></div> <!-- Added style -->
-            <button id="close-scanner-btn" class="w-full mt-4 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700">Cancelar</button>
+            <h3 class="text-xl font-bold mb-4 text-center text-white">Escanear Código de Barras</h3>
+            <div id="reader" class="w-full"></div>
+            <button id="close-scanner-btn" class="w-full mt-4 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">Cancelar</button>
         </div>
     </div>
 
     <!-- Image Preview Modal -->
     <div id="image-preview-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-50 p-4 transition-opacity duration-300">
         <div class="relative bg-gray-900 p-4 rounded-lg shadow-lg max-w-4xl max-h-[90vh] border border-gray-700">
-            <button id="close-preview-btn" class="absolute -top-4 -right-4 bg-red-600 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold hover:bg-red-700">&times;</button>
-            <img id="preview-image" src="" alt="Vista previa" class="max-w-full max-h-[85vh] object-contain">
+            <button id="close-preview-btn" class="absolute -top-4 -right-4 bg-red-600 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold hover:bg-red-700 transition-colors">&times;</button>
+            <img id="preview-image" src="" alt="Vista previa de la imagen" class="max-w-full max-h-[85vh] object-contain">
         </div>
     </div>
 
