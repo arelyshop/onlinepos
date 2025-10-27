@@ -1,16 +1,183 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // La lógica del panel de administración se inicializa directamente
+// --- GLOBAL APP STATE ---
+const API_BASE_URL = '/.netlify/functions';
+let currentUser = null;
+let allProducts = []; // Movido a global
+
+// --- GLOBAL NOTIFICATION FUNCTION ---
+const showNotification = (message, type = 'success') => {
+    const banner = document.getElementById('notification-banner');
+    const messageSpan = document.getElementById('notification-message');
+    if (!banner || !messageSpan) return;
+
+    messageSpan.textContent = message;
+    banner.className = 'fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-[60] rounded-lg shadow-lg'; // z-index alto
+    
+    if (type === 'success') {
+        banner.classList.add('bg-green-600');
+    } else {
+        banner.classList.add('bg-red-600');
+    }
+    
+    banner.style.transform = 'translateY(0)';
+    
+    setTimeout(() => {
+        banner.style.transform = 'translateY(-120%)';
+    }, 4000);
+};
+
+// --- AUTHENTICATION FUNCTIONS (from POS) ---
+
+function setupLoginListener() {
+    const loginForm = document.getElementById('login-form');
+    if (!loginForm) return;
+
+    const errorMessage = document.getElementById('error-message');
+    const loginButton = document.getElementById('login-button');
+    const buttonText = document.getElementById('login-button-text');
+    const loader = document.getElementById('login-loader');
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorMessage.textContent = '';
+        buttonText.classList.add('hidden');
+        loader.classList.remove('hidden');
+        loginButton.disabled = true;
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+
+            let result;
+            try {
+                result = await response.json();
+            } catch (jsonError) {
+                 console.error("Respuesta del login no es JSON:", response.status, response.statusText);
+                 throw new Error(`Error ${response.status}: ${response.statusText || 'Respuesta inválida del servidor'}`);
+            }
+
+            if (response.ok && result.status === 'success') {
+                // Solo permitir roles 'admin' o 'vendedor' (ajusta si es necesario)
+                if (result.user.role === 'admin' || result.user.role === 'vendedor') {
+                    sessionStorage.setItem('arelyShopUser', JSON.stringify(result.user));
+                    currentUser = result.user;
+                    initializeApp();
+                } else {
+                    errorMessage.textContent = 'No tienes permiso para acceder a este panel.';
+                }
+            } else {
+                errorMessage.textContent = result.message || 'Credenciales incorrectas o error del servidor.';
+            }
+        } catch (error) {
+            console.error('Error en el proceso de login:', error);
+            errorMessage.textContent = error.message.includes('Failed to fetch') ? 'No se pudo conectar al servidor.' : error.message;
+        } finally {
+            buttonText.classList.remove('hidden');
+            loader.classList.add('hidden');
+            loginButton.disabled = false;
+        }
+    });
+}
+
+function checkAuth() {
+    const userString = sessionStorage.getItem('arelyShopUser');
+    if (userString) {
+        try {
+            currentUser = JSON.parse(userString);
+            // Validar rol para este panel
+            if (currentUser && currentUser.id && (currentUser.role === 'admin' || currentUser.role === 'vendedor')) {
+                initializeApp();
+            } else {
+                console.warn("Usuario sin permisos o datos inválidos.");
+                logout(false); // Logout sin recargar
+            }
+        } catch (e) {
+            console.error("Error parseando datos de usuario:", e);
+            logout(false);
+        }
+    } else {
+         // Asegurarse que el panel esté oculto si no hay sesión
+        const appContainer = document.getElementById('admin-panel');
+        if (appContainer) appContainer.classList.add('hidden');
+        const loginContainer = document.getElementById('login-container');
+        if (loginContainer) loginContainer.classList.remove('hidden');
+    }
+}
+
+function logout(reload = true) {
+    sessionStorage.removeItem('arelyShopUser');
+    currentUser = null;
+    allProducts = []; // Limpiar estado global
+
+     // Ocultar admin panel, mostrar login
+     const appContainer = document.getElementById('admin-panel');
+     if (appContainer) {
+         appContainer.classList.add('hidden');
+         appContainer.classList.remove('flex');
+     }
+     const loginContainer = document.getElementById('login-container');
+     if (loginContainer) {
+         loginContainer.classList.remove('hidden');
+         loginContainer.classList.add('flex');
+     }
+    
+     if(reload) {
+        window.location.reload();
+     }
+}
+
+// --- APP INITIALIZATION ---
+
+function initializeApp() {
+    // 1. Ocultar login, mostrar panel de admin
+    const loginContainer = document.getElementById('login-container');
+    if (loginContainer) {
+        loginContainer.classList.add('hidden');
+        loginContainer.classList.remove('flex');
+    }
+    const appContainer = document.getElementById('admin-panel');
+    if (appContainer) {
+        appContainer.classList.remove('hidden');
+        appContainer.classList.add('flex'); // El panel de admin usa flex
+    }
+
+    // 2. Poner info del usuario en el header
+    const userFullnameEl = document.getElementById('user-fullname');
+    const userRoleEl = document.getElementById('user-role');
+    if (userFullnameEl) userFullnameEl.textContent = currentUser.full_name || 'Usuario';
+    if (userRoleEl) userRoleEl.textContent = currentUser.role || 'Rol';
+
+    // 3. Añadir listener al botón de logout
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) logoutButton.addEventListener('click', () => logout(true));
+
+    // 4. Iniciar la lógica específica del panel de admin
     initializeAdminLogic();
+}
 
-    function initializeAdminLogic() {
-        // --- STATE ---
-        let allProducts = [];
-        let currentProductId = null;
-        let html5QrCode = null;
-        let currentScannerTarget = null;
-        let sortable = null;
 
-        // --- ELEMENT SELECTORS ---
+// --- DOMContentLoaded (Modificado) ---
+document.addEventListener('DOMContentLoaded', () => {
+    setupLoginListener();
+    checkAuth();
+});
+
+
+// --- LÓGICA ORIGINAL DEL PANEL DE ADMIN ---
+function initializeAdminLogic() {
+    // --- STATE ---
+    // allProducts ahora es global
+    let currentProductId = null;
+    let html5QrCode = null;
+    let currentScannerTarget = null;
+    let sortable = null;
+
+    // --- ELEMENT SELECTORS ---
         const productForm = document.getElementById('product-form');
         const productFormContainer = document.getElementById('product-form-container');
         const productListContainer = document.getElementById('product-list-container');
@@ -45,33 +212,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const csvLogs = document.getElementById('csv-logs');
 
 
-        const API_URL = '/.netlify/functions/products'; // RESTful endpoint
+    const API_URL = '/.netlify/functions/products'; // RESTful endpoint
 
-        // --- FUNCTIONS ---
-        
-        const showNotification = (message, type = 'success') => {
-            const banner = document.getElementById('notification-banner');
-            const messageSpan = document.getElementById('notification-message');
-            if (!banner || !messageSpan) return;
-
-            messageSpan.textContent = message;
-            banner.className = 'fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg'; // Reset classes
-            
-            if (type === 'success') {
-                banner.classList.add('bg-green-600');
-            } else {
-                banner.classList.add('bg-red-600');
-            }
-            
-            banner.style.transform = 'translateY(0)';
-            
-            setTimeout(() => {
-                banner.style.transform = 'translateY(-120%)';
-            }, 4000);
-        };
-
-
-        const updateImageNumbers = () => {
+    // --- FUNCTIONS ---
+    // showNotification ahora es global
+    
+    const updateImageNumbers = () => {
             const imageItems = imageSortableList.querySelectorAll('div[data-url]');
             imageItems.forEach((item, index) => {
                 const numberEl = item.querySelector('.image-number');
@@ -573,4 +719,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
 
