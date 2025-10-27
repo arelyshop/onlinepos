@@ -106,6 +106,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userFullnameEl) userFullnameEl.textContent = currentUser.full_name || 'Admin';
         if (userRoleEl) userRoleEl.textContent = currentUser.role || 'admin';
 
+        // Mostrar info de usuario en el header móvil
+        const userFullnameMobileEl = document.getElementById('user-fullname-mobile');
+        const userRoleMobileEl = document.getElementById('user-role-mobile');
+        if (userFullnameMobileEl) userFullnameMobileEl.textContent = currentUser.full_name || 'Admin';
+        if (userRoleMobileEl) userRoleMobileEl.textContent = currentUser.role || 'admin';
+
         // Iniciar la lógica específica del panel de administración
         initializeAdminLogic();
     }
