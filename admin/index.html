@@ -30,6 +30,7 @@
 
     <!-- Pantalla de Login -->
     <div id="login-container" class="flex min-h-screen items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+        <!-- ... (Contenido del login sin cambios) ... -->
         <div class="max-w-md w-full space-y-8 p-10 rounded-xl shadow-lg border border-gray-700" style="background-color: #202c34;">
             <div>
                 <img class="mx-auto h-10 sm:h-12 w-auto" src="/images/logo-escritorio.svg" alt="ArelyShop">
@@ -74,6 +75,7 @@
         <div class="flex h-full w-full">
             <!-- Sidebar -->
             <div class="hidden md:flex flex-col w-64 flex-shrink-0 bg-gray-800 border-r border-gray-700">
+                <!-- ... (Contenido del sidebar sin cambios) ... -->
                 <div class="flex items-center justify-center h-16 bg-gray-900">
                     <img src="/images/logo-escritorio.svg" alt="Arelyshop Admin" class="h-10">
                 </div>
@@ -101,8 +103,8 @@
             <!-- Contenido Principal -->
             <div class="flex flex-col flex-grow min-w-0">
                 <!-- Header (Escritorio) -->
-                <!-- Añadido 'flex-shrink-0' para evitar que se encoja en alto -->
                 <header class="flex items-center justify-between h-16 bg-gray-800 border-b border-gray-700 px-6 flex-shrink-0">
+                    <!-- ... (Contenido del header sin cambios) ... -->
                     <div class="flex items-center">
                         <!-- Logo para Móvil/Header -->
                         <img src="/images/logo-escritorio.svg" alt="Arelyshop Admin" class="h-8 md:h-10 mr-4">
@@ -122,8 +124,8 @@
                 </header>
 
                 <!-- Título y Info de Usuario (Solo Móvil) -->
-                <!-- Añadido 'flex-shrink-0' también aquí -->
                 <div id="mobile-info-header" class="md:hidden flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700 flex-shrink-0">
+                    <!-- ... (Contenido del header móvil sin cambios) ... -->
                     <div>
                         <h1 class="text-xl font-bold text-white">Gestionar Productos</h1>
                         <p class="text-xs text-gray-400" id="user-role-mobile"></p>
@@ -131,8 +133,8 @@
                 </div>
 
                 <div class="flex-grow p-6 overflow-auto">
-                   <!-- Sección de Importar CSV -->
-                    <div class="mb-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
+                   <!-- ... (Sección CSV sin cambios) ... -->
+                   <div class="mb-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
                         <h2 class="text-2xl font-bold text-white mb-4">Importar Productos desde CSV</h2>
                         <div class="flex items-center space-x-4">
                             <input type="file" id="csv-file-input" accept=".csv" class="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
@@ -151,24 +153,31 @@
                                 + Nuevo Producto
                             </button>
                         </div>
+                        
+                        <!-- ***** INICIO DE CAMBIOS AQUÍ ***** -->
                         <div class="relative mb-4">
-                            <!-- Cambiamos padding derecho de pr-12 a pr-24 para dar espacio a los dos botones -->
+                             <!-- Padding derecho 'pr-24' para hacer espacio a AMBOS botones -->
                             <input type="text" id="search-product-input" placeholder="Buscar por nombre, SKU o código..." class="w-full pl-4 pr-24 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                             <!-- NUEVO: Botón de limpiar (X), posicionado a la derecha antes del botón de escanear -->
+                             
+                             <!-- Botón de Limpiar (X) -->
                              <button type="button" id="clear-search-btn" class="absolute top-0 right-12 hidden inline-flex items-center justify-center h-full w-12 text-gray-400 hover:text-white">
                                 <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
                             </button>
-                             <!-- Botón de escanear (se mantiene en right-0) -->
+                             
+                             <!-- Botón de Escanear (Cámara) -->
                              <button id="scan-search-btn" class="absolute top-0 right-0 inline-flex items-center justify-center h-full w-12 text-gray-400 hover:text-white">
                                 <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l74-80h240l74 80h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z"/></svg>
                             </button>
                         </div>
+                        <!-- ***** FIN DE CAMBIOS AQUÍ ***** -->
+                        
                         <div id="product-list" class="flex-grow overflow-y-auto custom-scrollbar pr-2">
                             <p class="text-gray-400">Cargando productos...</p>
                         </div>
                     </div>
 
                     <div id="product-form-container" class="hidden lg:block lg:col-span-2 bg-gray-800 p-6 rounded-lg border border-gray-700 lg:h-[85vh] overflow-y-auto custom-scrollbar">
+                        <!-- ... (Contenido del formulario sin cambios) ... -->
                         <div class="flex justify-between items-center mb-4">
                             <h2 id="form-title" class="text-2xl font-bold text-white">Agregar Nuevo Producto</h2>
                             <div class="flex items-center space-x-2">
@@ -333,6 +342,7 @@
     
     <!-- Barcode Scanner Modal -->
     <div id="scanner-container" class="fixed inset-0 bg-black bg-opacity-75 flex-col items-center justify-center hidden z-50 p-4">
+        <!-- ... (Contenido del modal de escáner sin cambios) ... -->
         <div class="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md border border-gray-700">
             <h3 class="text-xl font-bold mb-4 text-center text-white">Escanear Código de Barras</h3>
             <div id="reader" class="w-full"></div>
@@ -342,6 +352,7 @@
 
     <!-- Image Preview Modal -->
     <div id="image-preview-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-50 p-4 transition-opacity duration-300">
+        <!-- ... (Contenido del modal de imagen sin cambios) ... -->
         <div class="relative bg-gray-900 p-4 rounded-lg shadow-lg max-w-4xl max-h-[90vh] border border-gray-700">
             <button id="close-preview-btn" class="absolute -top-4 -right-4 bg-red-600 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold hover:bg-red-700 transition-colors">&times;</button>
             <img id="preview-image" src="" alt="Vista previa de la imagen" class="max-w-full max-h-[85vh] object-contain">
@@ -351,3 +362,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
