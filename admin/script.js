@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!banner || !messageSpan) return;
 
             messageSpan.textContent = message;
-            banner.className = 'fixed top-5 left-1/2 -translate-x-1/2 w-full max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg'; // Reset classes
+            banner.className = 'fixed top-5 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:w-full md:max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg'; // Reset classes
             
             if (type === 'success') {
                 banner.classList.add('bg-green-600');
@@ -708,4 +708,6 @@ csvFileInput.value = '';
         }
     }
 });
+
+
 
