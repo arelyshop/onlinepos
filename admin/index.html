@@ -20,10 +20,7 @@
         #reader__dashboard_section_csr button { background-color: #4a5568; color: white; padding: 8px 16px; border-radius: 8px; margin-top: 10px; }
         .sortable-ghost { opacity: 0.4; background: #2d3748; }
         .drag-handle { cursor: move; }
-        #notification-banner {
-            transition: transform 0.5s ease-in-out;
-            transform: translateY(-120%);
-        }
+        /* Ya no necesitamos #notification-banner aquí, se maneja con Tailwind */
         /* Estilos para el Loader de Login */
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3b82f6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -67,7 +64,8 @@
     </div>
 
     <!-- Banner de Notificación -->
-    <div id="notification-banner" class="fixed top-5 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg">
+    <!-- Clases de layout (left-4 right-4 etc) + clases de transición + estado inicial oculto (-translate-y-[120%]) -->
+    <div id="notification-banner" class="fixed top-5 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:w-full md:max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg transition-transform duration-500 ease-in-out -translate-y-[120%]">
         <span id="notification-message"></span>
     </div>
 
@@ -345,5 +343,7 @@
     <script src="script.js"></script>
 </body>
 </html>
+
+
 
 
