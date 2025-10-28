@@ -155,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const barcodeInput = document.getElementById('barcode');
         const scanBarcodeBtn = document.getElementById('scan-barcode-btn');
         const scanSearchBtn = document.getElementById('scan-search-btn');
+        const clearSearchBtn = document.getElementById('clear-search-btn'); // <-- AÑADIDO
         const scannerContainer = document.getElementById('scanner-container');
         const closeScannerBtn = document.getElementById('close-scanner-btn');
         const imagePreviewModal = document.getElementById('image-preview-modal');
@@ -500,7 +501,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        const handleSearch = () => renderProductList(allProducts);
+        // ***** INICIO DE CAMBIOS AQUÍ *****
+        // Se expandió la función para manejar la visibilidad del botón 'X'
+        const handleSearch = () => {
+            const searchTerm = searchInput.value;
+            renderProductList(allProducts); // Esta función ya usa el valor de searchInput
+
+            // Mostrar u ocultar el botón de limpiar
+            if (clearSearchBtn) {
+                clearSearchBtn.classList.toggle('hidden', searchTerm.length === 0);
+            }
+        };
+        // ***** FIN DE CAMBIOS AQUÍ *****
+
 
         function suggestSku() {
             const prefix = "ASP";
@@ -528,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     barcodeInput.value = decodedText;
                 } else if (currentScannerTarget === 'search') {
                     searchInput.value = decodedText;
-                    handleSearch();
+                    handleSearch(); // Llamar a handleSearch para actualizar la lista Y el botón 'X'
                 }
                 stopScanner();
             };
@@ -644,11 +657,22 @@ csvFileInput.value = '';
         });
 
         deleteBtn.addEventListener('click', handleDelete);
-        searchInput.addEventListener('input', handleSearch);
+        searchInput.addEventListener('input', handleSearch); // 'handleSearch' ya controla el botón 'X'
         suggestSkuBtn.addEventListener('click', suggestSku);
         scanBarcodeBtn.addEventListener('click', () => startScanner('barcode'));
         scanSearchBtn.addEventListener('click', () => startScanner('search'));
         closeScannerBtn.addEventListener('click', stopScanner);
+
+        // ***** INICIO DE CAMBIOS AQUÍ *****
+        // Event listener para el botón de limpiar
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = ''; // Limpiar el input
+                handleSearch();         // Ejecutar la búsqueda (que mostrará todo y ocultará la 'x')
+                searchInput.focus();      // Devolver el foco al input
+            });
+        }
+        // ***** FIN DE CAMBIOS AQUÍ *****
 
         productListEl.addEventListener('click', (event) => {
             const productElement = event.target.closest('[data-id]');
@@ -670,6 +694,8 @@ csvFileInput.value = '';
             urls.forEach(url => addUrlToSorter(url));
             imageUrlList.value = '';
         });
+
+
 
         addSingleUrlFieldBtn.addEventListener('click', createNewSingleImageInput);
 
