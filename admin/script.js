@@ -180,18 +180,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!banner || !messageSpan) return;
 
             messageSpan.textContent = message;
-            banner.className = 'fixed top-5 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:right-auto md:w-full md:max-w-md p-4 text-white text-center z-50 rounded-lg shadow-lg'; // Reset classes
             
-            if (type === 'success') {
-                banner.classList.add('bg-green-600');
-            } else {
-                banner.classList.add('bg-red-600');
-            }
+            // 1. Limpiar clases de color antiguas
+            banner.classList.remove('bg-green-600', 'bg-red-600');
             
-            banner.style.transform = 'translateY(0)';
+            // 2. Añadir la nueva clase de color
+            banner.classList.add(type === 'success' ? 'bg-green-600' : 'bg-red-600');
             
+            // 3. Mostrar el banner (quitando la clase que lo oculta)
+            banner.classList.remove('-translate-y-[120%]');
+            
+            // 4. Ocultar el banner después de 4 segundos
             setTimeout(() => {
-                banner.style.transform = 'translateY(-120%)';
+                banner.classList.add('-translate-y-[120%]');
+                
+                // 5. Opcional: Limpiar la clase de color después de que termine la animación de salida (500ms)
+                setTimeout(() => {
+                    banner.classList.remove('bg-green-600', 'bg-red-600');
+                }, 500); // Debe coincidir con la duración de la transición (duration-500)
+                
             }, 4000);
         };
 
@@ -708,6 +715,5 @@ csvFileInput.value = '';
         }
     }
 });
-
 
 
