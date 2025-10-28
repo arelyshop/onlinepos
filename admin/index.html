@@ -100,7 +100,9 @@
 
             <!-- Contenido Principal -->
             <div class="flex flex-col flex-grow min-w-0">
-                <header class="flex items-center justify-between h-16 bg-gray-800 border-b border-gray-700 px-4">
+                <!-- Header (Escritorio) -->
+                <!-- Añadido 'flex-shrink-0' para evitar que se encoja en alto -->
+                <header class="flex items-center justify-between h-16 bg-gray-800 border-b border-gray-700 px-6 flex-shrink-0">
                     <div class="flex items-center">
                         <!-- Logo para Móvil/Header -->
                         <img src="/images/logo-escritorio.svg" alt="Arelyshop Admin" class="h-8 md:h-10 mr-4">
@@ -119,11 +121,11 @@
                     </div>
                 </header>
 
-                <!-- Mobile Title & User Info -->
-                <div class="md:hidden p-4 bg-gray-800 border-b border-gray-700">
-                    <h1 class="text-xl font-bold text-white mb-2">Gestionar Productos</h1>
-                    <div id="user-info-mobile" class="text-left">
-                        <p class="font-semibold text-sm" id="user-fullname-mobile"></p>
+                <!-- Título y Info de Usuario (Solo Móvil) -->
+                <!-- Añadido 'flex-shrink-0' también aquí -->
+                <div id="mobile-info-header" class="md:hidden flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700 flex-shrink-0">
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Gestionar Productos</h1>
                         <p class="text-xs text-gray-400" id="user-role-mobile"></p>
                     </div>
                 </div>
@@ -343,7 +345,5 @@
     <script src="script.js"></script>
 </body>
 </html>
-
-
 
 
