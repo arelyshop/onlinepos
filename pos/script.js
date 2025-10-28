@@ -782,7 +782,71 @@ async function annulSaleInBackend(saleId) { if (!saleId) { showNotification("ID 
 // --- Fin Funciones de Anulación ---
 
 function reprintSale(saleId) { if (!saleId) return; const saleToReprint = sales.find(s => s && s.saleId === saleId); if (!saleToReprint) { showNotification("Venta no encontrada.", 'error'); return; } try { let saleItems; if (typeof saleToReprint.productosVendidos === 'string') { try { saleItems = JSON.parse(saleToReprint.productosVendidos); } catch (e) { saleItems = []; } } else { saleItems = Array.isArray(saleToReprint.productosVendidos) ? saleToReprint.productosVendidos : []; } if (!Array.isArray(saleItems)) { console.warn(`productosVendidos (reprint ${saleId}) no es array:`, saleToReprint.productosVendidos); saleItems = []; } const saleData = { customer: { name: saleToReprint.nombreCliente, contact: saleToReprint.contacto, id: saleToReprint.nitCi }, items: saleItems, total: parseFloat(saleToReprint.totalVenta || 0) }; const { pdfBlob, fileName } = generateSalePDF(saleId, saleData); if(pdfBlob && fileName) { showShareOptions(pdfBlob, fileName, 'Reimprimir Nota Venta', 'PDF generado.'); } else { throw new Error("No se generó Blob PDF."); } } catch (error) { console.error("Error PDF reprint:", error); showNotification(`Error al generar PDF: ${error.message}`, 'error'); } }
-function showProductModal(product) { if (!product || typeof product !== 'object') { console.error("showProductModal: Datos inválidos:", product); return; } const modal = document.getElementById('productDetailModal'); if(!modal) return; const imgEl = document.getElementById('modalProductImage'); const nameEl = document.getElementById('modalProductName'); const skuEl = document.getElementById('modalProductSku'); const codeEl = document.getElementById('modalProductCode'); const branchEl = document.getElementById('modalProductBranch'); const stockEl = document.getElementById('modalProductStock'); const priceEl = document.getElementById('modalProductPrice'); const purchasePriceEl = document.getElementById('modalProductPurchasePrice'); const wholesalePriceEl = document.getElementById('modalProductWholesalePrice'); const discountContainer = document.getElementById('discountPriceContainer'); const discountPriceEl = document.getElementById('modalProductDiscountPrice'); if(imgEl) imgEl.src = product.urlFoto1 || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen'; if(nameEl) nameEl.textContent = product.nombre || 'S/N'; if(skuEl) skuEl.textContent = product.sku || 'N/A'; if(codeEl) codeEl.textContent = product.codigoBarras || 'N/A'; if(branchEl) branchEl.textContent = product.ciudadSucursal || 'N/A'; if(stockEl) stockEl.textContent = product.cantidad?.toString() || '0'; const salePrice = parseFloat(product.precioVenta || 0).toFixed(2); const discountPrice = parseFloat(product.precioDescuento || 0); const purchasePrice = parseFloat(product.precioCompra || 0).toFixed(2); const wholesalePrice = parseFloat(product.precioMayoreo || 0).toFixed(2); if(priceEl) priceEl.textContent = `Bs. ${salePrice}`; if(purchasePriceEl) purchasePriceEl.textContent = `Bs. ${purchasePrice}`; if(wholesalePriceEl) wholesalePriceEl.textContent = `Bs. ${wholesalePrice}`; if (discountContainer && discountPriceEl && priceEl) { if (discountPrice > 0) { discountPriceEl.textContent = `Bs. ${discountPrice.toFixed(2)}`; discountContainer.classList.remove('hidden'); priceEl.classList.add('line-through'); } else { discountContainer.classList.add('hidden'); priceEl.classList.remove('line-through'); } } modal.classList.remove('hidden'); }
+
+function showProductModal(product) {
+     if (!product || typeof product !== 'object' || !product.id) { // Añadida verificación de ID
+         console.error("showProductModal: Datos inválidos o sin ID:", product);
+         return;
+     }
+
+    // --- CORRECCIÓN ---
+    // Buscar la info completa y actualizada del producto en la lista 'products'
+    // 'product' puede ser un item del carrito (parcial) o de la búsqueda (completo)
+    const fullProductInfo = products.find(p => p.id === product.id);
+
+    // Usar la info completa si existe, si no, usar el objeto 'product' pasado como fallback
+    const displayProduct = fullProductInfo || product;
+    // Obtener el stock real desde la lista 'products' (la fuente autoritativa)
+    const currentStock = fullProductInfo ? (fullProductInfo.cantidad ?? 0) : (product.cantidad ?? 0); // fallback por si acaso
+    // --- FIN CORRECCIÓN ---
+
+    const modal = document.getElementById('productDetailModal');
+    if(!modal) return;
+    const imgEl = document.getElementById('modalProductImage');
+    const nameEl = document.getElementById('modalProductName');
+    const skuEl = document.getElementById('modalProductSku');
+    const codeEl = document.getElementById('modalProductCode');
+    const branchEl = document.getElementById('modalProductBranch');
+    const stockEl = document.getElementById('modalProductStock');
+    const priceEl = document.getElementById('modalProductPrice');
+    const purchasePriceEl = document.getElementById('modalProductPurchasePrice');
+    const wholesalePriceEl = document.getElementById('modalProductWholesalePrice');
+    const discountContainer = document.getElementById('discountPriceContainer');
+    const discountPriceEl = document.getElementById('modalProductDiscountPrice');
+
+    // Usar 'displayProduct' para obtener todos los datos
+    if(imgEl) imgEl.src = displayProduct.urlFoto1 || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+Imagen';
+    if(nameEl) nameEl.textContent = displayProduct.nombre || 'S/N';
+    if(skuEl) skuEl.textContent = displayProduct.sku || 'N/A';
+    if(codeEl) codeEl.textContent = displayProduct.codigoBarras || 'N/A';
+    if(branchEl) branchEl.textContent = displayProduct.ciudadSucursal || 'N/A';
+
+    // --- APLICAR CORRECCIÓN ---
+    if(stockEl) stockEl.textContent = currentStock.toString(); // Usar el stock real de 'fullProductInfo'
+    // --- FIN APLICAR CORRECCIÓN ---
+
+    const salePrice = parseFloat(displayProduct.precioVenta || 0).toFixed(2);
+    const discountPrice = parseFloat(displayProduct.precioDescuento || 0);
+    const purchasePrice = parseFloat(displayProduct.precioCompra || 0).toFixed(2);
+    const wholesalePrice = parseFloat(displayProduct.precioMayoreo || 0).toFixed(2);
+
+    if(priceEl) priceEl.textContent = `Bs. ${salePrice}`;
+    if(purchasePriceEl) purchasePriceEl.textContent = `Bs. ${purchasePrice}`;
+    if(wholesalePriceEl) wholesalePriceEl.textContent = `Bs. ${wholesalePrice}`;
+
+    if (discountContainer && discountPriceEl && priceEl) {
+        if (discountPrice > 0) {
+            discountPriceEl.textContent = `Bs. ${discountPrice.toFixed(2)}`;
+            discountContainer.classList.remove('hidden');
+            priceEl.classList.add('line-through');
+        } else {
+            discountContainer.classList.add('hidden');
+            priceEl.classList.remove('line-through');
+        }
+    }
+    modal.classList.remove('hidden');
+}
+
 function copyToClipboard(text, buttonElement) { if (!text || text === 'N/A' || !buttonElement) return; navigator.clipboard.writeText(text).then(() => { const originalHTML = buttonElement.innerHTML; buttonElement.innerHTML = '¡Copiado!'; clearTimeout(buttonElement.copyTimeoutId); buttonElement.copyTimeoutId = setTimeout(() => { buttonElement.innerHTML = originalHTML; }, 1500); }).catch(err => { console.warn('navigator.clipboard falló:', err); try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); if(ok) { const oHTML = buttonElement.innerHTML; buttonElement.innerHTML = '¡Copiado!'; clearTimeout(buttonElement.copyTimeoutId); buttonElement.copyTimeoutId = setTimeout(() => { buttonElement.innerHTML = oHTML; }, 1500); } else { throw new Error('execCommand falló'); } } catch (execErr) { showNotification('No se pudo copiar.', 'error'); console.error('Fallback execCommand falló:', execErr); } }); }
 function showQrModal() { const qrImg = document.getElementById('pos-qr-code'); const modalImg = document.getElementById('modalQrImage'); const modal = document.getElementById('qrCodeModal'); if (qrImg && modalImg && modal && qrImg.src && !qrImg.src.includes('placehold.co')) { modalImg.src = qrImg.src; modal.classList.remove('hidden'); } }
 function showShareOptions(pdfBlob, fileName, title, text) { if (!(pdfBlob instanceof Blob)) { console.error("showShareOptions: pdfBlob inválido", pdfBlob); showNotification("Error PDF.", "error"); return; } if (!fileName) fileName = "doc.pdf"; currentPdfBlob = pdfBlob; currentPdfFileName = fileName; const modal = document.getElementById('share-modal'); const modalTitle = document.getElementById('share-modal-title'); const modalText = document.getElementById('share-modal-text'); const shareBtn = document.getElementById('share-pdf-btn'); const downloadBtn = document.getElementById('download-pdf-btn'); const closeModalBtn = document.getElementById('close-share-modal'); if (!modal || !modalTitle || !modalText || !shareBtn || !downloadBtn || !closeModalBtn) { console.error("Elementos modal compartir no encontrados."); try { const link = document.createElement('a'); link.href = URL.createObjectURL(currentPdfBlob); link.download = currentPdfFileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href); } catch (e) { showNotification("No se pudo descargar PDF.", "error"); } return; } modalTitle.textContent = title; modalText.textContent = text; let fileToShare; try { fileToShare = new File([currentPdfBlob], currentPdfFileName, { type: 'application/pdf' }); } catch (e) { console.error("Error creando File:", e); showNotification("No se pudo preparar archivo.", "error"); shareBtn.classList.add('hidden'); shareBtn.onclick = null; } const dataToShare = fileToShare ? { files: [fileToShare] } : null; if (dataToShare && navigator.share && navigator.canShare && navigator.canShare(dataToShare)) { shareBtn.classList.remove('hidden'); shareBtn.onclick = async () => { try { await navigator.share({ files: [fileToShare], title: `Doc: ${currentPdfFileName}`, text: 'Doc desde ArelyShop.' }); modal.classList.add('hidden'); } catch (error) { console.error('Error al compartir:', error); if (error.name !== 'AbortError') showNotification('No se pudo compartir.', 'error'); } }; } else { shareBtn.classList.add('hidden'); shareBtn.onclick = null; if(dataToShare) console.log("Web Share API no soportada."); } modal.classList.remove('hidden'); downloadBtn.onclick = () => { try { const link = document.createElement('a'); link.href = URL.createObjectURL(currentPdfBlob); link.download = currentPdfFileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href); modal.classList.add('hidden'); } catch (e) { console.error("Error descarga PDF:", e); showNotification("No se pudo descargar.", "error"); } }; closeModalBtn.onclick = () => { modal.classList.add('hidden'); }; }
