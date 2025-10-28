@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             div.innerHTML = `
                 <span class="image-number text-sm font-semibold text-gray-400 w-5 text-center"></span>
-                <svg class="w-7 h-7 text-gray-400 drag-handle" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                <svg class="w-10 h-10 md:w-7 md:h-7 text-gray-400 drag-handle" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 <img src="${url}" onerror="this.onerror=null;this.src='https://placehold.co/40x40/1f2937/9ca3af?text=Err';" class="w-10 h-10 rounded-md object-cover bg-gray-700 cursor-pointer hover:opacity-80 transition-opacity">
                 <p class="flex-grow text-sm text-gray-300 truncate">${url}</p>
                 <button type="button" class="text-xl text-red-400 hover:text-red-300 remove-image-btn">&times;</button>
@@ -741,3 +741,4 @@ csvFileInput.value = '';
         }
     }
 });
+
